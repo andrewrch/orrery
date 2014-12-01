@@ -1,4 +1,4 @@
 orrery
 ======
 
-Messing about with OpenGL 
+Messing about with OpenGL
