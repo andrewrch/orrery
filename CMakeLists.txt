@@ -21,7 +21,8 @@ target_link_libraries(orrery
   )
 
 include_directories(
-  include
+  "include"
+  "ext/linmath.h"
   ${GLFW_INCLUDE_DIRS}
   )
 

@@ -1,7 +1,26 @@
 #include "shader_program.h"
 #include <stdarg.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#define SHADERS_RESIZE_FACTOR 2
+
+void resize_shader_array(ShaderProgram* s) {
+  unsigned int new_len = SHADERS_RESIZE_FACTOR * s->shaders_len;
+  Shader** new_shaders = (Shader**) malloc(new_len * sizeof(Shader*));
+  for (unsigned int i = 0; i < s->num_shaders; i++) {
+    new_shaders[i] = s->shaders[i];
+  }
+  free(s->shaders);
+  s->shaders = new_shaders;
+  s->shaders_len = new_len;
+}
 
 void add_shader(ShaderProgram* sp, Shader* s) {
+  if (sp->num_shaders == sp->shaders_len) {
+    resize_shader_array(sp);
+  }
+  sp->shaders[sp->num_shaders++] = s;
 }
 
 void compile_shaders(ShaderProgram* sp) {
@@ -10,6 +29,10 @@ void compile_shaders(ShaderProgram* sp) {
       compile_shader(sp->shaders[i]);
     }
   }
+}
+
+void bind_program(ShaderProgram* s) {
+  glUseProgram(s->id);
 }
 
 void link_program(ShaderProgram* sp) {

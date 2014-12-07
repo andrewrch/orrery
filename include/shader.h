@@ -8,7 +8,7 @@ typedef struct shader {
   GLuint id;
   char** src;
   unsigned int num_src;
-  unsigned int current_src_len;
+  unsigned int src_len;
   bool compiled;
 } Shader;
 

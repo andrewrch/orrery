@@ -6,8 +6,8 @@
 
 void create_shader(Shader* s, GLenum type) {
   s->id = glCreateShader(type);
-  s->current_src_len = 5;
-  s->src = (char**) malloc(s->current_src_len * sizeof(char*));
+  s->src_len = 5;
+  s->src = (char**) malloc(s->src_len * sizeof(char*));
   s->num_src = 0;
   s->compiled = false;
 }
@@ -16,10 +16,12 @@ void create_frag_shader(Shader* s, char* file) {
   create_shader(s, GL_FRAGMENT_SHADER);
   add_shader_source(s, file);
 }
+
 void create_geom_shader(Shader* s, char* file) {
   create_shader(s, GL_GEOMETRY_SHADER);
   add_shader_source(s, file);
 }
+
 void create_vert_shader(Shader* s, char* file) {
   create_shader(s, GL_VERTEX_SHADER);
   add_shader_source(s, file);
@@ -34,21 +36,21 @@ void delete_shader(Shader* s) {
 }
 
 void resize_src_array(Shader* s) {
-  unsigned int new_len = SRC_ARRAY_RESIZE_FACTOR * s->current_src_len;
+  unsigned int new_len = SRC_ARRAY_RESIZE_FACTOR * s->src_len;
   char** new_src = (char**) malloc(new_len * sizeof(char*));
   for (unsigned int i = 0; s->num_src; i++) {
     new_src[i] = s->src[i];
   }
   free(s->src);
   s->src = new_src;
+  s->src_len = new_len;
 }
 
 void shader_add_source_from_string(Shader* s, char* src) {
-  if (s->num_src == s->current_src_len) {
+  if (s->num_src == s->src_len) {
     resize_src_array(s);
   }
-  s->src[s->num_src] = src;
-  s->num_src++;
+  s->src[s->num_src++] = src;
 }
 
 char* load_string_from_file(char* filename) {
