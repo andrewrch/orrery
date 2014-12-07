@@ -14,10 +14,10 @@ unsigned int calc_num_vertices(unsigned int rings,
   return rings * slices;
 }
 
-void build_sphere(Mesh* mesh,
-                  float radius,
-                  unsigned int slices,
-                  unsigned int rings)
+void create_sphere(Mesh* mesh,
+                   float radius,
+                   unsigned int slices,
+                   unsigned int rings)
 {
   unsigned int num_vertices = calc_num_vertices(rings, slices);
   unsigned int num_indices = calc_num_indices(rings, slices);
