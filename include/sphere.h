@@ -3,9 +3,9 @@
 
 #include "mesh.h"
 
-void build_sphere(Mesh* mesh,
-                  float radius,
-                  unsigned int slices,
-                  unsigned int rings);
+void create_sphere(Mesh* mesh,
+                   float radius,
+                   unsigned int slices,
+                   unsigned int rings);
 
 #endif

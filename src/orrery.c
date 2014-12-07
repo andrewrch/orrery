@@ -55,7 +55,7 @@ int main() {
 
   // Make a sphere
   Mesh m;
-  build_sphere(&m, 1.0f, 20, 20);
+  create_sphere(&m, 1.0f, 20, 20);
   for (unsigned int i = 0; i < m.num_vertices; i++)
   {
     float* p = m.vertices[i].position;
