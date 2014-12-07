@@ -59,7 +59,9 @@ flags = [
 '-isystem',
 '/usr/local/include',
 '-isystem',
-'./include'
+'./include',
+'-isystem',
+'./ext/linmath.h'
 ]
 
 
