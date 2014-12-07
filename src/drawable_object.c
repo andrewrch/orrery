@@ -1,4 +1,5 @@
 #include "drawable_object.h"
+#include <stdio.h>
 
 // I don't like this it's weird
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
@@ -39,7 +40,8 @@ void add_attribute(unsigned int attrib)
   // uchar attribute in my vertex
   GLenum type = attrib == COLOUR_LOCATION ? GL_UNSIGNED_BYTE :
                                             GL_FLOAT;
-  GLenum norm = attrib == COLOUR_LOCATION ? GL_TRUE : GL_FALSE;
+  GLboolean norm = attrib == COLOUR_LOCATION ? GL_TRUE : GL_FALSE;
+  glEnableVertexAttribArray(attrib);
   glVertexAttribPointer(
     attrib,
     get_attrib_size(attrib),
@@ -53,7 +55,6 @@ void create_object(DrawableObject* obj,
 {
   glGenVertexArrays(1, &obj->VAO);
   glBindVertexArray(obj->VAO);
-
   // Generate and buffer arrays
   glGenBuffers(NUM_BUFFERS, obj->buffers);
   buffer_vertices_static(mesh->vertices,
@@ -63,8 +64,8 @@ void create_object(DrawableObject* obj,
                  mesh->num_indices,
                  obj->buffers[INDEX_BUFFER]);
   obj->num_indices = mesh->num_indices;
-  glBindBuffer(GL_ARRAY_BUFFER, obj->buffers[VERTEX_BUFFER]);
   // Add attributes
+  glBindBuffer(GL_ARRAY_BUFFER, obj->buffers[VERTEX_BUFFER]);
   for (unsigned int i = 0; i < NUM_ATTRIBUTES; i++) 
   {
     add_attribute(i);

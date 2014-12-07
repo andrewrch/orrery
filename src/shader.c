@@ -2,12 +2,12 @@
 #include <stdio.h>
 #include "shader.h"
 
-#define SRC_ARRAY_RESIZE_FACTOR 2
+#define SRC_ARRAY_RESIZE_BY 5
 
 void create_shader(Shader* s, GLenum type) {
   s->id = glCreateShader(type);
-  s->src_len = 5;
-  s->src = (char**) malloc(s->src_len * sizeof(char*));
+  s->src_len = 0;
+  s->src = NULL;
   s->num_src = 0;
   s->compiled = false;
 }
@@ -36,7 +36,7 @@ void delete_shader(Shader* s) {
 }
 
 void resize_src_array(Shader* s) {
-  unsigned int new_len = SRC_ARRAY_RESIZE_FACTOR * s->src_len;
+  unsigned int new_len = SRC_ARRAY_RESIZE_BY + s->src_len;
   char** new_src = (char**) malloc(new_len * sizeof(char*));
   for (unsigned int i = 0; s->num_src; i++) {
     new_src[i] = s->src[i];
@@ -54,7 +54,7 @@ void shader_add_source_from_string(Shader* s, char* src) {
 }
 
 char* load_string_from_file(char* filename) {
-  FILE* f = fopen(filename, "r");
+  FILE* f = fopen(filename, "rb");
   char* buf = NULL;
   if (!f) {
     fprintf(stderr, "Could not open shader file: %s\n", filename);
@@ -62,7 +62,7 @@ char* load_string_from_file(char* filename) {
   } else {
     fseek(f, 0, SEEK_END);
     unsigned int len = ftell(f);
-    buf = (char*) malloc(len * sizeof(char));
+    buf = (char*) malloc(1 + len * sizeof(char));
     fseek(f, 0, SEEK_SET);
     if (buf) {
       fread(buf, sizeof(char), len, f);
@@ -70,6 +70,7 @@ char* load_string_from_file(char* filename) {
       fprintf(stderr, "Could not allocate memory for shader\n");
       return NULL;
     }
+    buf[len] = '\0';
   }
   return buf;
 }

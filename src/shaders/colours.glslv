@@ -7,9 +7,10 @@ layout (location = 3) in vec3 normal;
 
 uniform mat4 WVP;
 
-out vec4 colour;
+smooth out vec4 vertex_colour;
 
 void main()
 {
-    gl_Position = WVP * vec4(position, 1.0);
+  vertex_colour = colour;
+  gl_Position = WVP * vec4(position, 1.0);
 }

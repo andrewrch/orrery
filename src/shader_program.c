@@ -3,15 +3,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define SHADERS_RESIZE_FACTOR 2
+#define SHADERS_RESIZE_BY 5
 
 void resize_shader_array(ShaderProgram* s) {
-  unsigned int new_len = SHADERS_RESIZE_FACTOR * s->shaders_len;
+  unsigned int new_len = SHADERS_RESIZE_BY + s->shaders_len;
   Shader** new_shaders = (Shader**) malloc(new_len * sizeof(Shader*));
   for (unsigned int i = 0; i < s->num_shaders; i++) {
     new_shaders[i] = s->shaders[i];
   }
-  free(s->shaders);
+  if (s->shaders) {
+    free(s->shaders);
+  }
   s->shaders = new_shaders;
   s->shaders_len = new_len;
 }
@@ -42,35 +44,66 @@ void link_program(ShaderProgram* sp) {
     glAttachShader(sp->id, sp->shaders[i]->id);
   }
   //link and check whether the program links fine
-  GLint linkStatus, validStatus;
+  GLint status;
   glLinkProgram(sp->id);
-  glGetProgramiv(sp->id, GL_LINK_STATUS, &linkStatus);
-  glGetProgramiv(sp->id, GL_VALIDATE_STATUS, &validStatus);
-  if (validStatus == GL_FALSE || linkStatus == GL_FALSE) {
-    GLint infoLogLength;
-    glGetProgramiv (sp->id, GL_INFO_LOG_LENGTH, &infoLogLength);
-    GLchar infoLog[infoLogLength];
-    glGetProgramInfoLog (sp->id, infoLogLength, NULL, infoLog);
-    fprintf(stderr, "Shader link failure\n%s", infoLog);
+  glGetProgramiv(sp->id, GL_LINK_STATUS, &status);
+  if (status == GL_FALSE) {
+    GLint len;
+    glGetProgramiv (sp->id, GL_INFO_LOG_LENGTH, &len);
+    GLchar info_log[len];
+    glGetProgramInfoLog (sp->id, len, NULL, info_log);
+    fprintf(stderr, "Shader link failure\n%s", info_log);
+  }
+
+  // Validate that it'll all work fine with this GL profile
+  glValidateProgram(sp->id);
+  glGetProgramiv(sp->id, GL_VALIDATE_STATUS, &status);
+  if (status == GL_FALSE) {
+    GLint len;
+    glGetProgramiv (sp->id, GL_INFO_LOG_LENGTH, &len);
+    GLchar info_log[len];
+    glGetProgramInfoLog (sp->id, len, NULL, info_log);
+    fprintf(stderr, "Shader validation failed\n%s", info_log);
   }
   for (unsigned int i = 0; i < sp->num_shaders; i++) {
     glDetachShader(sp->id, sp->shaders[i]->id);
   }
 }
 
-void create_shader_program(ShaderProgram* sp, Shader* s, ...)
+void create_shader_program(ShaderProgram* sp, unsigned int num, ...)
 {
+  sp->shaders = NULL;;
+  sp->shaders_len = 0;
+  sp->num_shaders = 0;
   // Process shader args
   va_list ptr;
   Shader* current_s;
-  va_start(ptr, s);
+  va_start(ptr, num);
   // Loop through variadic args
-  do {
+  for (unsigned int i = 0; i < num; i++) {
     current_s = va_arg(ptr, Shader*);
     add_shader(sp, current_s);
-    printf("%d\n", current_s->id);
-    // Until end of list (NULL ptr)
-  } while(current_s);
+  }
   compile_shaders(sp);
   link_program(sp);
+}
+
+void add_float_uniform(ShaderProgram* s, char* n, float f) {
+  GLint loc = glGetUniformLocation(s->id, n);
+  glUniform1f(loc, f);
+}
+
+void add_int_uniform(ShaderProgram* s, char* n, int i) {
+  GLint loc = glGetUniformLocation(s->id, n);
+  glUniform1i(loc, i);
+}
+
+void add_vec4_uniform(ShaderProgram* s, char* n, vec4 v) {
+  GLint loc = glGetUniformLocation(s->id, n);
+  glUniform4fv(loc, 1, v);
+}
+
+void add_mat4x4_uniform(ShaderProgram* s, char* n, mat4x4 m) {
+  GLint loc = glGetUniformLocation(s->id, n);
+  glUniformMatrix4fv(loc , 1, false, (GLfloat*)m);
 }
