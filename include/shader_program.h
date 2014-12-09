@@ -4,7 +4,7 @@
 #include "shader.h"
 #include "linear_algebra.h"
 
-typedef struct shader_program {
+typedef struct {
   GLuint id;
   Shader** shaders;
   unsigned int num_shaders;

@@ -12,7 +12,7 @@ typedef enum buffer_type
   NUM_BUFFERS
 } BufferType;
 
-typedef struct drawable_object
+typedef struct
 {
   GLuint VAO;
   GLuint buffers[NUM_BUFFERS];

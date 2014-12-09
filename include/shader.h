@@ -4,7 +4,7 @@
 #include <GL/glew.h>
 #include <stdbool.h>
 
-typedef struct shader {
+typedef struct {
   GLuint id;
   char** src;
   unsigned int num_src;

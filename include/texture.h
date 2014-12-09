@@ -4,7 +4,7 @@
 #include <GL/gl.h>
 #include <stdlib.h>
 
-typedef struct texture {
+typedef struct {
   GLuint id;
 } Texture ;
 

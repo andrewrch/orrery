@@ -17,15 +17,15 @@ unsigned int get_attrib_offset(unsigned int attrib);
 // For colours
 typedef char ucvec4[4];
 
-typedef struct vertex {
+typedef struct {
   vec3 position;
   ucvec4 colour;
   vec2 tex_coords;
   vec3 normal;
 } Vertex;
 
-typedef struct mesh {
-  struct vertex* vertices;
+typedef struct {
+  Vertex* vertices;
   unsigned int* indices;
   // Required for buffering
   unsigned int num_indices, num_vertices;

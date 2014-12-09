@@ -5,7 +5,7 @@
 unsigned int calc_num_indices(unsigned int rings,
                               unsigned int slices)
 {
-  return (rings - 1) * slices * 6;
+  return (rings - 1) * (slices - 1) * 6;
 }
 
 unsigned int calc_num_vertices(unsigned int rings,
@@ -60,7 +60,7 @@ void create_sphere(Mesh* mesh,
   unsigned int index = 0;
   for (unsigned int r = 0; r < rings - 1; r++)
   {
-    for (unsigned int s = 0; s < slices; s++)
+    for (unsigned int s = 0; s < slices - 1; s++)
     {
       mesh->indices[index++] = r * slices + s;
       mesh->indices[index++] = r * slices + (s + 1);
