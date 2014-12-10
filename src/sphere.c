@@ -48,7 +48,7 @@ void create_sphere(Mesh* mesh,
       // Assign vertex texcoord
       float *t = mesh->vertices[index].tex_coords;
       *t++ = s * S;
-      *t++ = r * R;
+      *t++ = 1 - r * R; // Inverted so textures fit correctly
       // Assign normal
       float *n = mesh->vertices[index].normal;
       *n++ = x;

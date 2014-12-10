@@ -8,7 +8,7 @@ typedef struct {
   GLuint id;
 } Texture ;
 
-Texture* create_texture();
+int create_texture(Texture* t, char* file);
 void bind_texture(Texture* t);
 void unbind_texture();
 

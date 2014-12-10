@@ -150,7 +150,7 @@ static inline void mat4x4_sub(mat4x4 M, mat4x4 a, mat4x4 b)
   for (i = 0; i < 4; ++i)
     vec4_sub(M[i], a[i], b[i]);
 }
-static inline void mat4x4_scale(mat4x4 M, mat4x4 a, float k)
+static inline void mat4x4_mul_scalar(mat4x4 M, mat4x4 a, float k)
 {
   int i;
   for (i = 0; i < 4; ++i)
@@ -170,6 +170,9 @@ static inline void mat4x4_scale_aniso(mat4x4 M, mat4x4 a, float x, float y, floa
 static inline void mat4x4_mul(mat4x4 M, mat4x4 a, mat4x4 b)
 {
   int k, r, c;
+  mat4x4 tmp_a, tmp_b;
+  mat4x4_dup(tmp_a, a);
+  mat4x4_dup(tmp_b, b);
   for (c = 0; c < 4; ++c)
   {
     for (r = 0; r < 4; ++r)
@@ -177,7 +180,7 @@ static inline void mat4x4_mul(mat4x4 M, mat4x4 a, mat4x4 b)
       M[c][r] = 0.f;
       for (k = 0; k < 4; ++k)
       {
-        M[c][r] += a[k][r] * b[c][k];
+        M[c][r] += tmp_a[k][r] * tmp_b[c][k];
       }
     }
   }
@@ -199,6 +202,13 @@ static inline void mat4x4_translate(mat4x4 T, float x, float y, float z)
   T[3][1] = y;
   T[3][2] = z;
 }
+static inline void mat4x4_scale(mat4x4 T, float x, float y, float z)
+{
+  mat4x4_identity(T);
+  T[0][0] = x;
+  T[1][1] = y;
+  T[2][2] = z;
+}
 static inline void mat4x4_translate_in_place(mat4x4 M, float x, float y, float z)
 {
   vec4 t = {x, y, z, 0};
@@ -216,7 +226,7 @@ static inline void mat4x4_from_vec3_mul_outer(mat4x4 M, vec3 a, vec3 b)
   for (i = 0; i < 4; ++i) for (j = 0; j < 4; ++j)
       M[i][j] = i < 3 && j < 3 ? a[i] * b[j] : 0.f;
 }
-static inline void mat4x4_rotate(mat4x4 R, mat4x4 M, float x, float y, float z, float angle)
+static inline void mat4x4_rotate(mat4x4 M, float x, float y, float z, float angle)
 {
   float s = sinf(angle);
   float c = cosf(angle);
@@ -235,26 +245,21 @@ static inline void mat4x4_rotate(mat4x4 R, mat4x4 M, float x, float y, float z, 
       { u[1], -u[0],     0, 0},
       {    0,     0,     0, 0}
     };
-    mat4x4_scale(S, S, s);
+    mat4x4_mul_scalar(S, S, s);
 
     mat4x4 C;
     mat4x4_identity(C);
     mat4x4_sub(C, C, T);
 
-    mat4x4_scale(C, C, c);
+    mat4x4_mul_scalar(C, C, c);
 
     mat4x4_add(T, T, C);
-    mat4x4_add(T, T, S);
-
-    T[3][3] = 1.;
-
-    mat4x4 tmp;
-    mat4x4_dup(tmp, M);
-    mat4x4_mul(R, tmp, T);
+    mat4x4_add(M, T, S);
+    M[3][3] = 1.;
   }
   else
   {
-    mat4x4_dup(R, M);
+    mat4x4_identity(M);
   }
 }
 static inline void mat4x4_rotate_X(mat4x4 Q, mat4x4 M, float angle)

@@ -18,6 +18,7 @@ target_link_libraries(orrery
   ${OpenGL_LIBRARIES}
   ${GLEW_LIBRARIES}
   ${GLFW_STATIC_LIBRARIES}
+  "-ljpeg"
   )
 
 include_directories(

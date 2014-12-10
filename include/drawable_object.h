@@ -4,6 +4,7 @@
 #include <GL/glew.h>
 #include "mesh.h"
 #include "texture.h"
+#include "shader_program.h"
 
 typedef enum buffer_type
 {
@@ -21,6 +22,7 @@ typedef struct
 } DrawableObject;
 
 void create_object(DrawableObject* obj, Mesh* mesh);
-void draw(DrawableObject* obj);
+void set_texture(DrawableObject* obj, Texture* t);
+void draw(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp);
 
 #endif

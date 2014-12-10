@@ -73,12 +73,20 @@ void create_object(DrawableObject* obj,
   glBindVertexArray(0);
 }
 
-void draw(DrawableObject* obj)
+void set_texture(DrawableObject* obj, Texture* t) {
+  obj->texture = t;
+}
+
+void draw(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp)
 {
   glBindVertexArray(obj->VAO);
+  bind_program(sp);
   if (obj->texture) {
-    // Can bind a texture here
+    bind_texture(obj->texture);
+    glActiveTexture(GL_TEXTURE0);
+    add_int_uniform(sp, "texture_unit", 0);
   }
+  add_mat4x4_uniform(sp, "WVP", wvp);
   glDrawElements(GL_TRIANGLES,
                  obj->num_indices,
                  GL_UNSIGNED_INT,

@@ -1,12 +1,17 @@
 #version 330
 
-smooth in vec4 vertex_colour;
+uniform sampler2D texture_unit;
+
+in Data {
+  vec4 colour;
+  vec2 tex_coord;
+  vec3 normal;
+} data_in;
+
 out vec4 output_colour;
 
 void main()
 {
-  output_colour = vec4(1.0, 0.0, 1.0, 0.5);
-  //output_colour = vertex_colour;
-  /*gl_FragColor = vertex_colour;*/
-  //gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  // Set colour to the texture colour
+  output_colour = texture(texture_unit, data_in.tex_coord);
 }
