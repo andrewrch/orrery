@@ -38,8 +38,6 @@ typedef struct {
   float          axis_tilt;      /* tilt of axis wrt body's orbital plane (deg) */
   float          rot_period;     /* body's period of rotation (days) */
   unsigned int   orbits_body;    /* identifier of parent body */
-  float          spin;           /* current spin value (deg) */
-  float          orbit;          /* current orbit value (deg) */
 } BodyProperties;
 
 typedef struct {
@@ -84,12 +82,7 @@ void read_solar_system(BodyProperties* bodies, unsigned int* num_bodies)
       &bodies[i].rot_period,
       &bodies[i].orbits_body);
 
-    /* Initialise the body's state */
-    bodies[i].spin= 0.0;
-    bodies[i].orbit= my_rand() * 360.0; /* Start each body's orbit at a
-                                          random angle */
     bodies[i].radius*= 1000.0;
-    //bodies[i].orbital_radius /= 90.0;
   }
   fclose(f);
 }
@@ -158,16 +151,16 @@ void calculate_vp_matrix(mat4x4 vp, int width, int height) {
   // Sort out view and proj
   mat4x4 proj;
   mat4x4_perspective(proj, 45, width / (float) height,
-                     0.1, 10000000000.f);
+                     0.1, 200000.0f);
   mat4x4 view;
   vec3 up = {0.0, 1.0, 0.0};
-  vec3 pos = {200000000.0, 0.0, 0.0};
-  //vec3 pos = {100000.1, 100000.0, 100000.0};
+
+  vec3 pos = {20000.0, 0.0, 0.0};
   //vec3 pos = {1000.1, 1000.0, 1000.0};
-  /*vec3 pos = {0.0, 10.0, 0.1};*/
+  //vec3 pos = {0.0, 10.0, 0.1};
+  //vec3 pos = {20.0, 20.0, 0.1};
   vec3 target = {0.0, 0.0, 0.0};
   mat4x4_look_at(view, pos, target, up);
-
   // Combine in VP matrix
   mat4x4_mul(vp, proj, view);
 }
@@ -182,7 +175,6 @@ static void display(GLFWwindow* window,
 
   mat4x4 vp;
   calculate_vp_matrix(vp, width, height);
-
   double t = glfwGetTime();
   for (unsigned int i = 0; i < system->num_bodies; i++) {
     mat4x4 world;
@@ -231,9 +223,9 @@ int main(int argc, char* argv[]) {
   glEnable(GL_CULL_FACE);
 
   glEnable(GL_MULTISAMPLE);
-  /*glEnable(GL_DEPTH_TEST);*/
-  /*glDepthMask(GL_TRUE);*/
-  /*glDepthFunc(GL_GREATER);*/
+  glEnable(GL_DEPTH_TEST);
+  glDepthMask(GL_TRUE);
+  //glDepthFunc(GL_GEQUAL);
   glClearColor(.0f, .0f, .0f, .0f);
 
   /*glPolygonMode( GL_FRONT_AND_BACK, GL_LINE  );*/
