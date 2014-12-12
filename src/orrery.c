@@ -7,6 +7,7 @@
 #include "drawable_object.h"
 #include "shader_program.h"
 #include "sphere.h"
+#include "text.h"
 
 #define MAX_BODIES 20
 #define NUM_STARS 1000
@@ -30,6 +31,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode,
 // Borrowed from COMP27112 code
 typedef struct {
   char           name[20];       /* name */
+  char           tex_location[256];
   float          r, g, b;        /* colour */
   float          orbital_radius; /* distance to parent body (km) */
   float          orbital_tilt;   /* angle of orbit wrt ecliptic (deg) */
@@ -41,11 +43,23 @@ typedef struct {
 } BodyProperties;
 
 typedef struct {
+  FontAtlas* a;
+  FontRenderer* r;
+} Fonts;
+
+typedef struct {
+  // Properties about all the planets/moons
+  BodyProperties* config;
+  // The stars
   DrawableObject* starfield;
   unsigned int num_stars;
+  // The planets
   DrawableObject* body;
   unsigned int num_bodies;
-  BodyProperties* config;
+  // A texture for each body
+  Texture** body_textures;
+  // Fonts
+  Fonts* fonts;
 } SolarSystem;
 
 float my_rand (void)
@@ -71,8 +85,9 @@ void read_solar_system(BodyProperties* bodies, unsigned int* num_bodies)
   fscanf(f, "%u", num_bodies);
   for (unsigned int i = 0; i < *num_bodies; i++)
   {
-    fscanf(f, "%s %f %f %f %f %f %f %f %f %f %d",
+    fscanf(f, "%s %s %f %f %f %f %f %f %f %f %f %d",
        bodies[i].name,
+       bodies[i].tex_location,
       &bodies[i].r, &bodies[i].g, &bodies[i].b,
       &bodies[i].orbital_radius,
       &bodies[i].orbital_tilt,
@@ -124,7 +139,6 @@ void calculate_body_world_matrix(mat4x4 world,
   // And now rotate for axial tilt
   mat4x4_rotate(R, 1, 0, 0, deg_to_rad(b->axis_tilt));
   mat4x4_mul(world, R, world);
-
   // If b is a moon
   if (b->orbits_body) {
     trans_x = p->orbital_radius * sin(t * 500 / p->orbital_period);
@@ -135,13 +149,11 @@ void calculate_body_world_matrix(mat4x4 world,
     mat4x4_rotate(R, 0, 0, 1, deg_to_rad(p->orbital_tilt));
     mat4x4_mul(world, R, world);
   }
-
   // Move to correct position
   trans_x = b->orbital_radius * sin(t * 500 / b->orbital_period);
   trans_z = b->orbital_radius * cos(t * 500 / b->orbital_period);
   mat4x4_translate(T, trans_x, 0.0, trans_z);
   mat4x4_mul(world, T, world);
-
   // Rotate by orbital tilt
   mat4x4_rotate(R, 0, 0, 1, deg_to_rad(b->orbital_tilt));
   mat4x4_mul(world, R, world);
@@ -165,14 +177,60 @@ void calculate_vp_matrix(mat4x4 vp, int width, int height) {
   mat4x4_mul(vp, proj, view);
 }
 
+void get_body_screen_coords(vec4 coords, BodyProperties* bodies,
+                            unsigned int body, mat4x4 vp,
+                            double t) {
+  BodyProperties* b = &bodies[body];
+  BodyProperties* p = &bodies[bodies[body].orbits_body];
+  mat4x4 S, R, T, world;
+  float trans_x, trans_y, trans_z;
+
+  mat4x4_identity(world);
+  // If b is a moon
+  if (b->orbits_body) {
+    trans_x = p->orbital_radius * sin(t * 500 / p->orbital_period);
+    trans_z = p->orbital_radius * cos(t * 500/ p->orbital_period);
+    mat4x4_translate(T, trans_x, 0.0, trans_z);
+    mat4x4_mul(world, T, world);
+    // Rotate by orbital tilt
+    mat4x4_rotate(R, 0, 0, 1, deg_to_rad(p->orbital_tilt));
+    mat4x4_mul(world, R, world);
+  }
+  // Move to correct position
+  trans_x = b->orbital_radius * sin(t * 500 / b->orbital_period);
+  trans_z = b->orbital_radius * cos(t * 500 / b->orbital_period);
+  trans_y = 1.1 * b->radius;
+  mat4x4_translate(T, trans_x, trans_y, trans_z);
+  mat4x4_mul(world, T, world);
+  // Rotate by orbital tilt
+  mat4x4_rotate(R, 0, 0, 1, deg_to_rad(b->orbital_tilt));
+  mat4x4_mul(world, R, world);
+  mat4x4 wvp;
+  mat4x4_mul(wvp, vp, world);
+  vec4 origin = {0, 0, 0, 1};
+  mat4x4_mul_vec4(coords, wvp, origin);
+  // Perspective division
+  for (int i = 0; i < 4; i++) 
+    coords[i] /= coords[3];
+}
+
+bool viewable(vec4 p) {
+ bool r = true;
+ for (int i = 0; i < 4; i++) {
+   r = r && p[i] <= 1.0 && p[i] >= -1.0;
+ }
+ return r;
+}
+
 static void display(GLFWwindow* window,
                     SolarSystem* system,
                     ShaderProgram* sp) {
   int width, height;
   glfwGetFramebufferSize(window, &width, &height);
   glViewport(0, 0, width, height);
+  float sx = 1.0 / width;
+  float sy = 1.0 / height;
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
   mat4x4 vp;
   calculate_vp_matrix(vp, width, height);
   double t = glfwGetTime();
@@ -181,7 +239,17 @@ static void display(GLFWwindow* window,
     calculate_body_world_matrix(world, system->config, i, t);
     mat4x4 wvp;
     mat4x4_mul(wvp, vp, world);
+    bind_texture(system->body_textures[i]);
     draw(system->body, sp, wvp);
+    vec4 coords;
+    get_body_screen_coords(coords, system->config, i, vp, t);
+    set_font_colour(system->fonts->r, 255, 255, 255, 255);
+    if (viewable(coords)) {
+      render_text(system->fonts->r,
+                  system->fonts->a,
+                  system->config[i].name,
+                  coords[0], coords[1], sx, sy);
+    }
   }
   glfwSwapBuffers(window);
   glfwPollEvents();
@@ -218,32 +286,49 @@ int main(int argc, char* argv[]) {
   }
   // Have to do this because of glewExperimental
   glGetError();
+
   // Enable backface culling
   glCullFace(GL_BACK);
   glEnable(GL_CULL_FACE);
-
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_MULTISAMPLE);
   glEnable(GL_DEPTH_TEST);
   glDepthMask(GL_TRUE);
-  //glDepthFunc(GL_GEQUAL);
   glClearColor(.0f, .0f, .0f, .0f);
 
   /*glPolygonMode( GL_FRONT_AND_BACK, GL_LINE  );*/
 
   // Make a sphere
   Mesh sphere_mesh;
-  create_sphere(&sphere_mesh, 1.0f, 100, 100);
+  create_sphere(&sphere_mesh, 1.0f, 20, 20);
 
   DrawableObject sphere;
   create_object(&sphere, &sphere_mesh);
 
   DrawableObject starfield;
-  generate_starfield(&starfield, 1000);
+  //generate_starfield(&starfield, 1000);
 
   // Read the data
   unsigned int num_bodies;
   BodyProperties bodies[MAX_BODIES];
   read_solar_system(bodies, &num_bodies);
+
+  ShaderProgram sp;
+  create_program_from_files(&sp, 2, argv[1],
+                                    argv[2]);
+
+  Texture* t[num_bodies];
+  for (unsigned int i = 0; i < num_bodies; i++) {
+    t[i] = malloc(sizeof(Texture));
+    create_texture(t[i], bodies[i].tex_location);
+  }
+
+  FontRenderer r;
+  create_font_renderer(&r);
+  FontAtlas a;
+  create_font_atlas(&a, "../fonts/FreeSans.ttf", 24);
+  Fonts f = { .r = &r, .a = &a};
 
   SolarSystem system;
   system.starfield = &starfield;
@@ -251,21 +336,23 @@ int main(int argc, char* argv[]) {
   system.config = bodies;
   system.body = &sphere;
   system.num_bodies = num_bodies;
-
-  Shader vert, frag;
-  create_vert_shader(&vert, argv[1]);
-  create_frag_shader(&frag, argv[2]);
-  ShaderProgram sp;
-  create_shader_program(&sp, 2, &vert, &frag);
-
-  Texture t;
-  create_texture(&t, argv[3]);
-  sphere.texture = &t;
+  system.body_textures = t;
+  system.fonts = &f;
 
   glfwSetTime(0.0);
   while (!glfwWindowShouldClose(window)) {
     display(window, &system, &sp);
   }
+
+  delete_program(&sp);
+  delete_mesh(&sphere_mesh);
+  delete_object(&sphere);
+  for (unsigned int i = 0; i < num_bodies; i++) {
+    delete_texture(t[i]);
+    free(t[i]);
+  }
+  delete_font_atlas(&a);
+  delete_font_renderer(&r);
 
   glfwDestroyWindow(window);
   glfwTerminate();

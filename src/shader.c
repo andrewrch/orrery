@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "shader.h"
+#include <GL/glew.h>
 
 #define SRC_ARRAY_RESIZE_BY 5
 
@@ -38,7 +39,7 @@ void delete_shader(Shader* s) {
 void resize_src_array(Shader* s) {
   unsigned int new_len = SRC_ARRAY_RESIZE_BY + s->src_len;
   char** new_src = (char**) malloc(new_len * sizeof(char*));
-  for (unsigned int i = 0; s->num_src; i++) {
+  for (unsigned int i = 0; i < s->num_src; i++) {
     new_src[i] = s->src[i];
   }
   free(s->src);

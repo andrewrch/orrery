@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 typedef struct {
+  //GLuint id;
   GLuint id;
   char** src;
   unsigned int num_src;

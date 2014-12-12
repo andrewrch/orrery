@@ -1,4 +1,5 @@
 #include "mesh.h"
+#include <stdlib.h>
 
 unsigned int get_attrib_size(unsigned int attrib) {
   unsigned int s;
@@ -30,5 +31,10 @@ unsigned int get_attrib_offset(unsigned int attrib) {
     default: o = 0;
   }
   return o;
+}
+
+void delete_mesh(Mesh* m) {
+  free(m->vertices);
+  free(m->indices);
 }
 

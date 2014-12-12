@@ -1,4 +1,5 @@
 #include "shader_program.h"
+#include <string.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -70,7 +71,32 @@ void link_program(ShaderProgram* sp) {
   }
 }
 
-void create_shader_program(ShaderProgram* sp, unsigned int num, ...)
+void create_program_from_files(ShaderProgram* sp, unsigned int num, ...)
+{
+  sp->shaders = NULL;;
+  sp->shaders_len = 0;
+  sp->num_shaders = 0;
+  // Process shader args
+  va_list ptr;
+  char* current_f;
+  va_start(ptr, num);
+  // Loop through variadic args
+  for (unsigned int i = 0; i < num; i++) {
+    current_f = va_arg(ptr, char*);
+
+    Shader* s = malloc(sizeof(Shader));
+    if (strstr(current_f, ".glslf")) {
+      create_frag_shader(s, current_f);
+    } else if (strstr(current_f, ".glslv")) {
+      create_vert_shader(s, current_f);
+    }
+    add_shader(sp, s);
+  }
+  compile_shaders(sp);
+  link_program(sp);
+}
+
+void create_program_from_shaders(ShaderProgram* sp, unsigned int num, ...)
 {
   sp->shaders = NULL;;
   sp->shaders_len = 0;
@@ -86,6 +112,15 @@ void create_shader_program(ShaderProgram* sp, unsigned int num, ...)
   }
   compile_shaders(sp);
   link_program(sp);
+}
+
+void delete_program(ShaderProgram* sp) {
+  for (unsigned int i = 0; i < sp->num_shaders; i++) {
+    delete_shader(sp->shaders[i]);
+    free(sp->shaders[i]);
+  }
+  free(sp->shaders);
+  glDeleteProgram(sp->id);
 }
 
 void add_float_uniform(ShaderProgram* s, char* n, float f) {
@@ -106,4 +141,8 @@ void add_vec4_uniform(ShaderProgram* s, char* n, vec4 v) {
 void add_mat4x4_uniform(ShaderProgram* s, char* n, mat4x4 m) {
   GLint loc = glGetUniformLocation(s->id, n);
   glUniformMatrix4fv(loc , 1, false, (GLfloat*)m);
+}
+
+unsigned int get_attrib_location(ShaderProgram* s, char* n) {
+  return glGetAttribLocation(s->id, n);
 }

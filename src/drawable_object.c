@@ -71,6 +71,13 @@ void create_object(DrawableObject* obj,
     add_attribute(i);
   }
   glBindVertexArray(0);
+  obj->texture = NULL;
+}
+
+void delete_object(DrawableObject* obj) {
+  glDeleteBuffers(NUM_BUFFERS, obj->buffers);
+  glDeleteVertexArrays(1, &obj->VAO);
+  delete_texture(obj->texture);
 }
 
 void set_texture(DrawableObject* obj, Texture* t) {

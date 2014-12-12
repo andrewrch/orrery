@@ -31,4 +31,6 @@ typedef struct {
   unsigned int num_indices, num_vertices;
 } Mesh;
 
+void delete_mesh(Mesh* m);
+
 #endif

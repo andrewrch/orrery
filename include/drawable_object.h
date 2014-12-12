@@ -22,6 +22,7 @@ typedef struct
 } DrawableObject;
 
 void create_object(DrawableObject* obj, Mesh* mesh);
+void delete_object(DrawableObject* obj);
 void set_texture(DrawableObject* obj, Texture* t);
 void draw(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp);
 

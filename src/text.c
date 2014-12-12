@@ -7,17 +7,17 @@
 #define max(a,b) (a>b?a:b)
 #define MAXWIDTH 1024
 
+typedef struct {
+  FT_Library ft;
+  FT_Face face;
+} Font;
+
 void init_atlas_texture(FontAtlas* fa) {
   glActiveTexture(GL_TEXTURE0);
   glGenTextures(1, &fa->t.id);
   bind_texture(&fa->t);
-  GLenum e = glGetError();
-  printf("init atlas tex %d %d\n", e, e == GL_INVALID_OPERATION);
-  printf("%d %d\n", fa->w, fa->h);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, fa->w, fa->h,
                0, GL_RED, GL_UNSIGNED_BYTE, 0);
-  e = glGetError();
-  printf("init atlas tex %d %d\n", e, e == GL_INVALID_OPERATION);
   /* We require 1 byte alignment when uploading texture data */
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
   /* Clamping to edges is important to prevent artifacts when scaling */
@@ -74,9 +74,18 @@ int load_font(Font* f, char* filename) {
   return 1;
 }
 
-void create_font_atlas(FontAtlas* fa, Font* f, unsigned int height) {
-  FT_Set_Pixel_Sizes(f->face, 0, height);
-  FT_GlyphSlot g = f->face->glyph;
+void delete_font(Font* f) {
+  FT_Done_Face(f->face);
+  FT_Done_FreeType(f->ft);
+}
+
+void create_font_atlas(FontAtlas* fa, char* filename, unsigned int height) {
+  Font f;
+  if (!load_font(&f, filename)) {
+    fprintf(stderr, "Couldn't load font from file: %s\n", filename);
+  }
+  FT_Set_Pixel_Sizes(f.face, 0, height);
+  FT_GlyphSlot g = f.face->glyph;
   int roww = 0;
   int rowh = 0;
   fa->w = 0;
@@ -84,7 +93,7 @@ void create_font_atlas(FontAtlas* fa, Font* f, unsigned int height) {
   memset(fa->c, 0, sizeof fa->c);
   /* Find minimum size for a texture holding all visible ASCII characters */
   for (int i = 32; i < 128; i++) {
-    if (FT_Load_Char(f->face, i, FT_LOAD_RENDER)) {
+    if (FT_Load_Char(f.face, i, FT_LOAD_RENDER)) {
       fprintf(stderr, "Loading character %c failed!\n", i);
       continue;
     }
@@ -102,7 +111,9 @@ void create_font_atlas(FontAtlas* fa, Font* f, unsigned int height) {
   fa->h += rowh;
 
   init_atlas_texture(fa);
-  copy_glyphs_to_texture(fa, f);
+  copy_glyphs_to_texture(fa, &f);
+  // Clean up
+  delete_font(&f);
 }
 
 void delete_font_atlas(FontAtlas* fa) {
@@ -171,10 +182,8 @@ void render_text(FontRenderer* r, FontAtlas* a, const char *text,
 
 void create_font_renderer(FontRenderer* r) {
   // First create shader program
-  Shader frag, vert;
-  create_frag_shader(&frag, "../shaders/text.glslf");
-  create_vert_shader(&vert, "../shaders/text.glslv");
-  create_shader_program(&r->sp, 2, &vert, &frag);
+  create_program_from_files(&r->sp, 2, "../shaders/text.glslv",
+                                       "../shaders/text.glslf");
 
   // Create the vertex buffer object
   glGenVertexArrays(1, &r->vao);
@@ -183,15 +192,14 @@ void create_font_renderer(FontRenderer* r) {
   glBindBuffer(GL_ARRAY_BUFFER, r->vbo);
 
   // Set up attribute array
-  unsigned int attribute_coord = get_attrib_location(&r->sp, "coord");
-  glEnableVertexAttribArray(attribute_coord);
-  glVertexAttribPointer(attribute_coord, 4, GL_FLOAT, GL_FALSE, 0, 0);
+  unsigned int coord_attrib = get_attrib_location(&r->sp, "coord");
+  glEnableVertexAttribArray(coord_attrib);
+  glVertexAttribPointer(coord_attrib, 4, GL_FLOAT, GL_FALSE, 0, 0);
   glBindVertexArray(0);
 }
 
 void delete_font_renderer(FontRenderer* r) {
-  delete_shader_program(&r->sp);
-  glDisableVertexAttribArray(r->attribute_coord);
+  delete_program(&r->sp);
   glDeleteBuffers(1, &r->vbo);
   glDeleteVertexArrays(1, &r->vao);
 }

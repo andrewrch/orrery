@@ -25,25 +25,17 @@ typedef struct {
 } FontAtlas;
 
 typedef struct {
-  FT_Library ft;
-  FT_Face face;
-} Font;
-
-typedef struct {
   ShaderProgram sp; // Font shader
   GLuint vao, vbo;
   GLint attribute_coord;
 } FontRenderer;
 
-int load_font(Font* f, char* filename);
-
 void create_font_renderer(FontRenderer* r);
 void delete_font_renderer(FontRenderer* r);
-
 void set_font_colour(FontRenderer*, unsigned int r, unsigned int g, unsigned int b,
                                     unsigned int a);
 
-void create_font_atlas(FontAtlas* fa, Font* f, unsigned int height);
+void create_font_atlas(FontAtlas* fa, char* f, unsigned int height);
 void delete_font_atlas(FontAtlas* fa);
 
 void render_text(FontRenderer* r, FontAtlas* a, const char *text,

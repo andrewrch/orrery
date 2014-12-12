@@ -44,6 +44,7 @@ int create_texture(Texture* t, char* filename)
     jpeg_read_scanlines( &info, &rowptr, 1 );
   }
   jpeg_finish_decompress(&info);
+  jpeg_destroy_decompress(&info);
   fclose(file);
 
   glGenTextures(1, &t->id);
@@ -58,4 +59,9 @@ int create_texture(Texture* t, char* filename)
   free(data);
   return 1;
 }
+
+void delete_texture(Texture* t) {
+  glDeleteTextures(1, &t->id);
+}
+
 
