@@ -8,9 +8,12 @@
 #include "shader_program.h"
 #include "sphere.h"
 #include "text.h"
+#include "camera.h"
 
 #define MAX_BODIES 20
 #define NUM_STARS 1000
+
+Camera camera;
 
 static inline double deg_to_rad(double deg) {
   return deg * 0.017453293;
@@ -25,6 +28,41 @@ static void key_callback(GLFWwindow* window, int key, int scancode,
   if ((key == GLFW_KEY_ESCAPE || key == GLFW_KEY_Q)
       && action == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, GL_TRUE);
+  }
+  const float step = 300.0;
+  if (key == GLFW_KEY_W) {
+    move_forward(&camera, step);
+  }
+  if (key == GLFW_KEY_S) {
+    move_backwards(&camera, step);
+  }
+  if (key == GLFW_KEY_A) {
+    move_left(&camera, step);
+  }
+  if (key == GLFW_KEY_D) {
+    move_right(&camera, step);
+  }
+  const float angle = 2;
+  if (key == GLFW_KEY_L) {
+    rotate_right(&camera, angle);
+  }
+  if (key == GLFW_KEY_J) {
+    rotate_left(&camera, angle);
+  }
+  if (key == GLFW_KEY_I) {
+    rotate_up(&camera, angle);
+  }
+  if (key == GLFW_KEY_K) {
+    rotate_down(&camera, angle);
+  }
+
+  if (key == GLFW_KEY_N && (mods & GLFW_MOD_SHIFT)
+      && action == GLFW_PRESS) {
+    printf("Pressed N\n");
+  }
+  if (key == GLFW_KEY_N && !(mods & GLFW_MOD_SHIFT) &&
+      action == GLFW_PRESS) {
+    printf("Pressed n\n");
   }
 }
 
@@ -134,15 +172,15 @@ void calculate_body_world_matrix(mat4x4 world,
   mat4x4_scale(S, b->radius, b->radius, b->radius);
   mat4x4_mul(world, S, world);
   // Rotate to hour in the day
-  mat4x4_rotate(R, 0, 1, 0, b->rot_period * t / 100);
+  mat4x4_rotate(R, 0, 1, 0, b->rot_period * t);
   mat4x4_mul(world, R, world);
   // And now rotate for axial tilt
   mat4x4_rotate(R, 1, 0, 0, deg_to_rad(b->axis_tilt));
   mat4x4_mul(world, R, world);
   // If b is a moon
   if (b->orbits_body) {
-    trans_x = p->orbital_radius * sin(t * 500 / p->orbital_period);
-    trans_z = p->orbital_radius * cos(t * 500/ p->orbital_period);
+    trans_x = p->orbital_radius * sin(t / p->orbital_period);
+    trans_z = p->orbital_radius * cos(t / p->orbital_period);
     mat4x4_translate(T, trans_x, 0.0, trans_z);
     mat4x4_mul(world, T, world);
     // Rotate by orbital tilt
@@ -150,8 +188,8 @@ void calculate_body_world_matrix(mat4x4 world,
     mat4x4_mul(world, R, world);
   }
   // Move to correct position
-  trans_x = b->orbital_radius * sin(t * 500 / b->orbital_period);
-  trans_z = b->orbital_radius * cos(t * 500 / b->orbital_period);
+  trans_x = b->orbital_radius * sin(t / b->orbital_period);
+  trans_z = b->orbital_radius * cos(t / b->orbital_period);
   mat4x4_translate(T, trans_x, 0.0, trans_z);
   mat4x4_mul(world, T, world);
   // Rotate by orbital tilt
@@ -159,20 +197,12 @@ void calculate_body_world_matrix(mat4x4 world,
   mat4x4_mul(world, R, world);
 }
 
-void calculate_vp_matrix(mat4x4 vp, int width, int height) {
+void calculate_vp_matrix(mat4x4 vp, int w, int h) {
   // Sort out view and proj
   mat4x4 proj;
-  mat4x4_perspective(proj, 45, width / (float) height,
-                     0.1, 200000.0f);
+  mat4x4_perspective(proj, 45, w/ (float) h, 0.1, 200000.0f);
   mat4x4 view;
-  vec3 up = {0.0, 1.0, 0.0};
-
-  vec3 pos = {20000.0, 0.0, 0.0};
-  //vec3 pos = {1000.1, 1000.0, 1000.0};
-  //vec3 pos = {0.0, 10.0, 0.1};
-  //vec3 pos = {20.0, 20.0, 0.1};
-  vec3 target = {0.0, 0.0, 0.0};
-  mat4x4_look_at(view, pos, target, up);
+  get_view_matrix(&camera, view);
   // Combine in VP matrix
   mat4x4_mul(vp, proj, view);
 }
@@ -188,8 +218,8 @@ void get_body_screen_coords(vec4 coords, BodyProperties* bodies,
   mat4x4_identity(world);
   // If b is a moon
   if (b->orbits_body) {
-    trans_x = p->orbital_radius * sin(t * 500 / p->orbital_period);
-    trans_z = p->orbital_radius * cos(t * 500/ p->orbital_period);
+    trans_x = p->orbital_radius * sin(t / p->orbital_period);
+    trans_z = p->orbital_radius * cos(t / p->orbital_period);
     mat4x4_translate(T, trans_x, 0.0, trans_z);
     mat4x4_mul(world, T, world);
     // Rotate by orbital tilt
@@ -197,8 +227,8 @@ void get_body_screen_coords(vec4 coords, BodyProperties* bodies,
     mat4x4_mul(world, R, world);
   }
   // Move to correct position
-  trans_x = b->orbital_radius * sin(t * 500 / b->orbital_period);
-  trans_z = b->orbital_radius * cos(t * 500 / b->orbital_period);
+  trans_x = b->orbital_radius * sin(t / b->orbital_period);
+  trans_z = b->orbital_radius * cos(t / b->orbital_period);
   trans_y = 1.1 * b->radius;
   mat4x4_translate(T, trans_x, trans_y, trans_z);
   mat4x4_mul(world, T, world);
@@ -338,6 +368,11 @@ int main(int argc, char* argv[]) {
   system.num_bodies = num_bodies;
   system.body_textures = t;
   system.fonts = &f;
+
+  // Set up camera
+  vec3 pos = {20000.0, 0.0, 0.0};
+  vec3 up = {0.0, 1.0, 0.0};
+  init_camera(&camera, pos, up);
 
   glfwSetTime(0.0);
   int run = 1;
