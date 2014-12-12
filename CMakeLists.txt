@@ -7,6 +7,7 @@ find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLFW REQUIRED glfw3)
+pkg_search_module(FT REQUIRED freetype2)
 
 add_subdirectory(src)
 
@@ -18,6 +19,7 @@ target_link_libraries(orrery
   ${OpenGL_LIBRARIES}
   ${GLEW_LIBRARIES}
   ${GLFW_STATIC_LIBRARIES}
+  ${FT_LIBRARIES}
   "-ljpeg"
   )
 
@@ -25,6 +27,7 @@ include_directories(
   "include"
   "ext/linmath.h"
   ${GLFW_INCLUDE_DIRS}
+  ${FT_INCLUDE_DIRS}
   )
 
 # So we cna have debug and release builds
