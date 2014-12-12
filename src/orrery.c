@@ -248,7 +248,7 @@ static void display(GLFWwindow* window,
       render_text(system->fonts->r,
                   system->fonts->a,
                   system->config[i].name,
-                  coords[0], coords[1], sx, sy);
+                  coords, sx, sy);
     }
   }
   glfwSwapBuffers(window);
@@ -256,7 +256,7 @@ static void display(GLFWwindow* window,
 }
 
 int main(int argc, char* argv[]) {
-  if (argc < 4) {
+  if (argc < 3) {
     printf("Please supply some vertex and frag shader location\n");
     exit(EXIT_FAILURE);
   }
@@ -289,7 +289,7 @@ int main(int argc, char* argv[]) {
 
   // Enable backface culling
   glCullFace(GL_BACK);
-  glEnable(GL_CULL_FACE);
+  //glEnable(GL_CULL_FACE);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_MULTISAMPLE);
@@ -340,8 +340,11 @@ int main(int argc, char* argv[]) {
   system.fonts = &f;
 
   glfwSetTime(0.0);
+  int run = 1;
+  /*while (run) {*/
   while (!glfwWindowShouldClose(window)) {
     display(window, &system, &sp);
+    run = 0;
   }
 
   delete_program(&sp);

@@ -120,17 +120,23 @@ void delete_font_atlas(FontAtlas* fa) {
   delete_texture(&fa->t);
 }
 
-// This just makes the following funciton a little nicer
-typedef struct {
-  GLfloat x;
-  GLfloat y;
-  GLfloat s;
-  GLfloat t;
-} Point;
+void vec3_assign(vec3 v, float a, float b, float c) {
+  v[0] = a;
+  v[1] = b;
+  v[2] = c;
+}
+void vec2_assign(vec2 v, float a, float b) {
+  v[0] = a;
+  v[1] = b;
+}
 
-// Currently works -1, -1 to 1, 1 -> maybe adjust to 0-1?
+typedef struct {
+  vec3 pos;
+  vec2 tex;
+} BufferData;
+
 void render_text(FontRenderer* r, FontAtlas* a, const char *text,
-                 float x, float y, float sx, float sy) {
+                 vec4 coords, float sx, float sy) {
   bind_program(&r->sp);
   const uint8_t *p;
   /* Use the texture containing the atlas */
@@ -138,10 +144,9 @@ void render_text(FontRenderer* r, FontAtlas* a, const char *text,
   add_int_uniform(&r->sp, "tex", 0);
 
   glBindVertexArray(r->vao);
-
-  Point coords[6 * strlen(text)];
+  BufferData b[6* strlen(text)];
   int c = 0;
-
+  float x = coords[0], y = coords[1], z = coords[2];
   /* Loop through all characters */
   for (p = (const uint8_t *)text; *p; p++) {
     /* Calculate the vertex and texture coordinates */
@@ -158,24 +163,40 @@ void render_text(FontRenderer* r, FontAtlas* a, const char *text,
     if (!w || !h)
       continue;
 
-    // Clockwise winding
-    // First Triangle
-    coords[c++] = (Point) {
-    x2, -y2 - h, a->c[*p].tx, a->c[*p].ty + a->c[*p].bh / a->h};
-    coords[c++] = (Point) {
-    x2 + w, -y2, a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty};
-    coords[c++] = (Point) {x2, -y2, a->c[*p].tx, a->c[*p].ty};
-    // Second triangle
-    coords[c++] = (Point) {
-    x2 + w, -y2, a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty};
-    coords[c++] = (Point) {
-    x2, -y2 - h, a->c[*p].tx, a->c[*p].ty + a->c[*p].bh / a->h};
-    coords[c++] = (Point) {
-    x2 + w, -y2 - h, a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty + a->c[*p].bh / a->h};
-  }
+    float tx0, tx1, ty0, ty1, px0, px1, py0, py1;
+    // Clockwise winding with positions named like this
+    //  x0,y1 o---o x1,y1
+    //        |  /|
+    //        | / |
+    //        |/  |
+    //  x0,y0 o---o x1,y0
 
+    px0 = x2;
+    px1 = x2 + w;
+    py0 = -y2 - h;
+    py1 = -y2;
+
+    tx0 = a->c[*p].tx;
+    tx1 = a->c[*p].tx + a->c[*p].bw / a->w,
+    ty0 = a->c[*p].ty + a->c[*p].bh / a->h;
+    ty1 = a->c[*p].ty;
+
+    vec3_assign(b[c].pos,   px0, py0, z);
+    vec2_assign(b[c++].tex, tx0, ty0);
+    vec3_assign(b[c].pos,   px1, py1, z);
+    vec2_assign(b[c++].tex, tx1, ty1);
+    vec3_assign(b[c].pos,   px0, py1, z);
+    vec2_assign(b[c++].tex, tx0, ty1);
+    // Second triangle
+    vec3_assign(b[c].pos,   px1, py1, z);
+    vec2_assign(b[c++].tex, tx1, ty1);
+    vec3_assign(b[c].pos,   px0, py0, z);
+    vec2_assign(b[c++].tex, tx0, ty0);
+    vec3_assign(b[c].pos,   px1, py0, z);
+    vec2_assign(b[c++].tex, tx1, ty0);
+  }
   /* Draw all the character on the screen in one go */
-  glBufferData(GL_ARRAY_BUFFER, sizeof coords, coords, GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(b), b, GL_DYNAMIC_DRAW);
   glDrawArrays(GL_TRIANGLES, 0, c);
   glBindVertexArray(0);
 }
@@ -184,17 +205,20 @@ void create_font_renderer(FontRenderer* r) {
   // First create shader program
   create_program_from_files(&r->sp, 2, "../shaders/text.glslv",
                                        "../shaders/text.glslf");
-
   // Create the vertex buffer object
   glGenVertexArrays(1, &r->vao);
   glBindVertexArray(r->vao);
   glGenBuffers(1, &r->vbo);
-  glBindBuffer(GL_ARRAY_BUFFER, r->vbo);
-
   // Set up attribute array
-  unsigned int coord_attrib = get_attrib_location(&r->sp, "coord");
-  glEnableVertexAttribArray(coord_attrib);
-  glVertexAttribPointer(coord_attrib, 4, GL_FLOAT, GL_FALSE, 0, 0);
+  glBindBuffer(GL_ARRAY_BUFFER, r->vbo);
+  unsigned int pos_attrib = get_attrib_location(&r->sp, "position");
+  glEnableVertexAttribArray(pos_attrib);
+  glVertexAttribPointer(pos_attrib, 3, GL_FLOAT, GL_FALSE,
+                        sizeof(BufferData), 0);
+  unsigned int tex_attrib = get_attrib_location(&r->sp, "tex_coord");
+  glEnableVertexAttribArray(tex_attrib);
+  glVertexAttribPointer(tex_attrib, 2, GL_FLOAT, GL_FALSE,
+                        sizeof(BufferData), NULL+sizeof(vec3));
   glBindVertexArray(0);
 }
 

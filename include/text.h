@@ -26,7 +26,8 @@ typedef struct {
 
 typedef struct {
   ShaderProgram sp; // Font shader
-  GLuint vao, vbo;
+  GLuint vao;
+  GLuint vbo;
   GLint attribute_coord;
 } FontRenderer;
 
@@ -39,6 +40,5 @@ void create_font_atlas(FontAtlas* fa, char* f, unsigned int height);
 void delete_font_atlas(FontAtlas* fa);
 
 void render_text(FontRenderer* r, FontAtlas* a, const char *text,
-                 float x, float y, float sx, float sy);
-
+                 vec4 coords, float sx, float sy);
 #endif
