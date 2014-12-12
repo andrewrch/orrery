@@ -1,0 +1,89 @@
+8
+
+Sun
+/home/andrew/code/orrery/textures/texture_sun.jpg
+1.0 1.0 0.5
+0.0
+0.0
+1.0
+1.3920
+0.0
+27.0
+0
+
+Mercury
+/home/andrew/code/orrery/textures/texture_mercury.jpg
+0.7 0.2 0.7
+5791.0
+7.004
+87.97
+0.2439
+2.0
+58.65
+0
+
+Venus
+/home/andrew/code/orrery/textures/texture_venus_surface.jpg
+0.9 0.7 0.2
+10820.0
+3.394
+224.7
+0.6051
+177.3
+243.0
+0
+
+Earth
+/home/andrew/code/orrery/textures/texture_earth_surface.jpg
+0.1 0.7 0.9
+14960.0
+0.0
+365.26
+0.6378
+23.45
+1.0
+0
+
+Mars
+/home/andrew/code/orrery/textures/texture_mars.jpg
+0.8 0.3 0.3
+22794.0
+1.850
+686.98
+0.3393
+25.19
+1.026
+0
+
+Moon
+/home/andrew/code/orrery/textures/texture_moon.jpg
+0.7 0.7 0.7
+1922.0
+0.0
+27.322
+0.1738
+0.0
+27.322
+3
+
+Phobos
+/home/andrew/code/orrery/textures/texture_moon.jpg
+0.7 0.7 0.7
+938.0
+0.0
+31.9
+0.1200
+0.0
+31.9
+4
+
+Deimos
+/home/andrew/code/orrery/textures/texture_moon.jpg
+0.7 0.7 0.7
+2346.0
+0.0
+126.3
+0.0700
+0.0
+126.3
+4
