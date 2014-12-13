@@ -63,11 +63,11 @@ void create_sphere(Mesh* mesh,
     for (unsigned int s = 0; s < slices - 1; s++)
     {
       mesh->indices[index++] = r * slices + s;
-      mesh->indices[index++] = r * slices + (s + 1);
       mesh->indices[index++] = (r + 1) * slices + s;
       mesh->indices[index++] = r * slices + (s + 1);
+      mesh->indices[index++] = r * slices + (s + 1);
+      mesh->indices[index++] = (r + 1) * slices + s;
       mesh->indices[index++] = (r + 1) * slices + (s + 1);
-      mesh->indices[index++] = (r + 1) * slices + s;
     }
   }
 }

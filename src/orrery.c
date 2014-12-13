@@ -172,7 +172,7 @@ void calculate_body_world_matrix(mat4x4 world,
   mat4x4_scale(S, b->radius, b->radius, b->radius);
   mat4x4_mul(world, S, world);
   // Rotate to hour in the day
-  mat4x4_rotate(R, 0, 1, 0, b->rot_period * t);
+  mat4x4_rotate(R, 0, 1, 0, t / b->rot_period);
   mat4x4_mul(world, R, world);
   // And now rotate for axial tilt
   mat4x4_rotate(R, 1, 0, 0, deg_to_rad(b->axis_tilt));
@@ -200,7 +200,8 @@ void calculate_body_world_matrix(mat4x4 world,
 void calculate_vp_matrix(mat4x4 vp, int w, int h) {
   // Sort out view and proj
   mat4x4 proj;
-  mat4x4_perspective(proj, 45, w/ (float) h, 0.1, 200000.0f);
+  mat4x4_perspective(proj, deg_to_rad(30.0),
+                     w/ (float) h, 0.1, 200000.0f);
   mat4x4 view;
   get_view_matrix(&camera, view);
   // Combine in VP matrix
@@ -212,7 +213,7 @@ void get_body_screen_coords(vec4 coords, BodyProperties* bodies,
                             double t) {
   BodyProperties* b = &bodies[body];
   BodyProperties* p = &bodies[bodies[body].orbits_body];
-  mat4x4 S, R, T, world;
+  mat4x4 R, T, world;
   float trans_x, trans_y, trans_z;
 
   mat4x4_identity(world);
@@ -318,8 +319,7 @@ int main(int argc, char* argv[]) {
   glGetError();
 
   // Enable backface culling
-  glCullFace(GL_BACK);
-  //glEnable(GL_CULL_FACE);
+  glEnable(GL_CULL_FACE);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_MULTISAMPLE);
@@ -331,7 +331,7 @@ int main(int argc, char* argv[]) {
 
   // Make a sphere
   Mesh sphere_mesh;
-  create_sphere(&sphere_mesh, 1.0f, 20, 20);
+  create_sphere(&sphere_mesh, 1.0f, 50, 50);
 
   DrawableObject sphere;
   create_object(&sphere, &sphere_mesh);
