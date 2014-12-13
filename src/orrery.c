@@ -29,6 +29,8 @@ static void key_callback(GLFWwindow* window, int key, int scancode,
       && action == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, GL_TRUE);
   }
+
+  if (action != GLFW_RELEASE) {
   const float step = 300.0;
   if (key == GLFW_KEY_W) {
     move_forward(&camera, step);
@@ -55,7 +57,6 @@ static void key_callback(GLFWwindow* window, int key, int scancode,
   if (key == GLFW_KEY_K) {
     rotate_down(&camera, angle);
   }
-
   if (key == GLFW_KEY_N && (mods & GLFW_MOD_SHIFT)
       && action == GLFW_PRESS) {
     printf("Pressed N\n");
@@ -63,6 +64,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode,
   if (key == GLFW_KEY_N && !(mods & GLFW_MOD_SHIFT) &&
       action == GLFW_PRESS) {
     printf("Pressed n\n");
+  }
   }
 }
 
@@ -259,12 +261,12 @@ static void display(GLFWwindow* window,
   int width, height;
   glfwGetFramebufferSize(window, &width, &height);
   glViewport(0, 0, width, height);
-  float sx = 1.0 / width;
-  float sy = 1.0 / height;
+  float sx = 2.0 / width;
+  float sy = 2.0 / height;
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   mat4x4 vp;
   calculate_vp_matrix(vp, width, height);
-  double t = glfwGetTime();
+  double t =  30 * glfwGetTime();
   for (unsigned int i = 0; i < system->num_bodies; i++) {
     mat4x4 world;
     calculate_body_world_matrix(world, system->config, i, t);
