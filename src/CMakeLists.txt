@@ -8,5 +8,6 @@ set(ORRERY_SRC
     ${CMAKE_CURRENT_LIST_DIR}/shader_program.c
     ${CMAKE_CURRENT_LIST_DIR}/text.c
     ${CMAKE_CURRENT_LIST_DIR}/camera.c
+    ${CMAKE_CURRENT_LIST_DIR}/star.c
     CACHE INTERNAL
     "Source files for Orrery")
