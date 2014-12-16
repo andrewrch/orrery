@@ -1,6 +1,7 @@
 #include "star.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 enum important_fields {
   ID = 1,
@@ -83,25 +84,77 @@ void read_star_from_line(Star* s, char* line) {
   }
 }
 
-void read_stars(Star* s, unsigned int* num_stars, char* filename) {
+void read_stars(Star** s, unsigned int* num_stars, char* filename) {
   FILE* f = fopen(filename, "r");
   if (!f) {
     fprintf(stderr, "Could not open star file %s\n", filename);
   }
   // Count number of stars from file
-  fseek(f, 0, SEEK_END);
-  *num_stars = ftell(f);
+  unsigned int num_lines = 0;
+  char line[500];
+  while (fgets(line, sizeof(line), f)) {
+    num_lines++;
+  }
   // Init star array
-  s = (Star*) malloc(*num_stars * sizeof(Star));
+  *num_stars = num_lines - 1;
+  *s = (Star*) malloc(*num_stars * sizeof(Star));
+  // back to beginning of file
   fseek(f, 0, SEEK_SET);
   // Read file line by line
-  char line[500];
   unsigned int i = 0;
   // Throw away first line
   fgets(line, sizeof(line), f);
-  char* r;
-  while ((r = fgets(line, sizeof(line), f))) {
-    read_star_from_line(&s[i++], line);
+  while (fgets(line, sizeof(line), f)) {
+    read_star_from_line(&((*s)[i++]), line);
   }
   fclose(f);
+}
+
+void read_asterium_from_line(Asterium* asterium, char* line){
+  char* tok;
+  tok = strtok(line, " ");
+  strcpy(asterium->name, tok);
+  tok = strtok(NULL, " ");
+  sscanf(tok, "%d", &asterium->num_connections);
+  asterium->connections = (AsteriumConnection*)
+    malloc(asterium->num_connections * sizeof(AsteriumConnection));
+  for (unsigned int i = 0; i < asterium->num_connections; i++) {
+    tok = strtok(NULL, " ");
+    sscanf(tok, "%d", &asterium->connections[i].first);
+    tok = strtok(NULL, " ");
+    sscanf(tok, "%d", &asterium->connections[i].second);
+  }
+}
+
+void read_asteriums(Asterium** asteriums,
+                    unsigned int* num_asteriums, char* filename) {
+  FILE* f = fopen(filename, "r");
+  if (!f) {
+    fprintf(stderr, "Could not open star file %s\n", filename);
+  }
+  // Count number of asteriums from file
+  unsigned int num_lines = 0;
+  char line[500];
+  while (fgets(line, sizeof(line), f)) {
+    num_lines++;
+  }
+  *num_asteriums = num_lines;
+  *asteriums = (Asterium*) malloc(*num_asteriums * sizeof(Asterium));
+  // back to beginning of file
+  fseek(f, 0, SEEK_SET);
+  // Read file line by line
+  unsigned int i = 0;
+  while (fgets(line, sizeof(line), f)) {
+    read_asterium_from_line(&((*asteriums)[i++]), line);
+  }
+  fclose(f);
+
+  for (unsigned int i = 0; i < *num_asteriums; i++) {
+    Asterium* a = &(*asteriums)[i];
+    printf("Ast: %s %d\n", a->name, a->num_connections);
+    for (unsigned int j = 0; j < a->num_connections; j++) {
+      printf("%d %d ", a->connections[j].first, a->connections[j].second);
+    }
+    printf("\n");
+  }
 }

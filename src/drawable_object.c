@@ -36,16 +36,11 @@ void buffer_indices(unsigned int* indices,
 
 void add_attribute(unsigned int attrib)
 {
-  // Little bit hacky here might need to remove if I ever use another
-  // uchar attribute in my vertex
-  GLenum type = attrib == COLOUR_LOCATION ? GL_UNSIGNED_BYTE :
-                                            GL_FLOAT;
-  GLboolean norm = attrib == COLOUR_LOCATION ? GL_TRUE : GL_FALSE;
   glEnableVertexAttribArray(attrib);
   glVertexAttribPointer(
     attrib,
     get_attrib_size(attrib),
-    type, norm,
+    GL_FLOAT, GL_FALSE,
     sizeof(Vertex),
     BUFFER_OFFSET(get_attrib_offset(attrib)));
 }
@@ -60,10 +55,13 @@ void create_object(DrawableObject* obj,
   buffer_vertices_static(mesh->vertices,
                          mesh->num_vertices,
                          obj->buffers[VERTEX_BUFFER]);
-  buffer_indices(mesh->indices,
-                 mesh->num_indices,
-                 obj->buffers[INDEX_BUFFER]);
-  obj->num_indices = mesh->num_indices;
+  obj->num_vertices = mesh->num_vertices;
+  if (mesh->indices) {
+    buffer_indices(mesh->indices,
+                   mesh->num_indices,
+                   obj->buffers[INDEX_BUFFER]);
+    obj->num_indices = mesh->num_indices;
+  }
   // Add attributes
   glBindBuffer(GL_ARRAY_BUFFER, obj->buffers[VERTEX_BUFFER]);
   for (unsigned int i = 0; i < NUM_ATTRIBUTES; i++) 
@@ -84,7 +82,29 @@ void set_texture(DrawableObject* obj, Texture* t) {
   obj->texture = t;
 }
 
-void draw(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp)
+void draw_points(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp)
+{
+  glBindVertexArray(obj->VAO);
+  bind_program(sp);
+  add_mat4x4_uniform(sp, "WVP", wvp);
+  glDrawArrays(GL_POINTS, 0, obj->num_vertices);
+  glBindVertexArray(0);
+}
+
+void draw_lines(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp)
+{
+  glBindVertexArray(obj->VAO);
+  bind_program(sp);
+  add_mat4x4_uniform(sp, "WVP", wvp);
+  glDrawElements(GL_LINES,
+                 obj->num_indices,
+                 GL_UNSIGNED_INT,
+                 NULL);
+  glBindVertexArray(0);
+}
+
+
+void draw_triangles(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp)
 {
   glBindVertexArray(obj->VAO);
   bind_program(sp);

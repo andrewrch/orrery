@@ -196,6 +196,7 @@ void render_text(FontRenderer* r, FontAtlas* a, const char *text,
     vec2_assign(b[c++].tex, tx1, ty0);
   }
   /* Draw all the character on the screen in one go */
+  glBindBuffer(GL_ARRAY_BUFFER, r->vbo);
   glBufferData(GL_ARRAY_BUFFER, sizeof(b), b, GL_DYNAMIC_DRAW);
   glDrawArrays(GL_TRIANGLES, 0, c);
   glBindVertexArray(0);
@@ -229,13 +230,11 @@ void delete_font_renderer(FontRenderer* r) {
 }
 
 void set_font_colour(FontRenderer* fr,
-                     unsigned int r,
-                     unsigned int g,
-                     unsigned int b,
-                     unsigned int a) {
-
+                     float r,
+                     float g,
+                     float b,
+                     float a) {
   bind_program(&fr->sp);
-  GLfloat colour[4] = {(float) r / 255, (float) g / 255,
-                       (float) b / 255, (float) a / 255};
+  GLfloat colour[4] = {r, g, b, a};
   add_vec4_uniform(&fr->sp, "color", colour);
 }

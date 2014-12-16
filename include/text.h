@@ -10,7 +10,6 @@ typedef struct {
   Texture t;        // texture object
   int w;      // width of texture in pixels
   int h;      // height of texture in pixels
-
   struct {
     float ax;  // advance.x
     float ay;  // advance.y
@@ -21,7 +20,6 @@ typedef struct {
     float tx;  // x offset of glyph in texture coordinates
     float ty;  // y offset of glyph in texture coordinates
   } c[128];    // character information
-
 } FontAtlas;
 
 typedef struct {
@@ -33,12 +31,9 @@ typedef struct {
 
 void create_font_renderer(FontRenderer* r);
 void delete_font_renderer(FontRenderer* r);
-void set_font_colour(FontRenderer*, unsigned int r, unsigned int g, unsigned int b,
-                                    unsigned int a);
-
+void set_font_colour(FontRenderer*, float r, float g, float b, float a);
 void create_font_atlas(FontAtlas* fa, char* f, unsigned int height);
 void delete_font_atlas(FontAtlas* fa);
-
 void render_text(FontRenderer* r, FontAtlas* a, const char *text,
                  vec4 coords, float sx, float sy);
 #endif

@@ -7,13 +7,20 @@
 #include "drawable_object.h"
 #include "shader_program.h"
 #include "sphere.h"
+#include "star.h"
 #include "text.h"
 #include "camera.h"
 
 #define MAX_BODIES 20
 #define NUM_STARS 1000
 
+typedef struct {
+  bool show_constellations;
+  bool show_asteriums;
+} OrreryOptions;
+
 Camera camera;
+OrreryOptions options;
 
 static inline double deg_to_rad(double deg) {
   return deg * 0.017453293;
@@ -29,7 +36,6 @@ static void key_callback(GLFWwindow* window, int key, int scancode,
       && action == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, GL_TRUE);
   }
-
   if (action != GLFW_RELEASE) {
   const float step = 300.0;
   if (key == GLFW_KEY_W) {
@@ -57,6 +63,11 @@ static void key_callback(GLFWwindow* window, int key, int scancode,
   if (key == GLFW_KEY_K) {
     rotate_down(&camera, angle);
   }
+  if (key == GLFW_KEY_C && action == GLFW_PRESS) {
+    printf("Toggled asteriums\n");
+    options.show_asteriums = !options.show_asteriums;
+  }
+
   if (key == GLFW_KEY_N && (mods & GLFW_MOD_SHIFT)
       && action == GLFW_PRESS) {
     printf("Pressed N\n");
@@ -93,9 +104,11 @@ typedef struct {
   // The stars
   DrawableObject* starfield;
   unsigned int num_stars;
+  ShaderProgram* star_shader;
   // The planets
   DrawableObject* body;
   unsigned int num_bodies;
+  ShaderProgram* body_shader;
   // A texture for each body
   Texture** body_textures;
   // Fonts
@@ -106,10 +119,6 @@ float my_rand (void)
 {
   /* return a random float in the range [0,1] */
   return (float) rand() / RAND_MAX;
-}
-
-void draw_starfield (void)
-{
 }
 
 void read_solar_system(BodyProperties* bodies, unsigned int* num_bodies)
@@ -142,20 +151,51 @@ void read_solar_system(BodyProperties* bodies, unsigned int* num_bodies)
   fclose(f);
 }
 
-void generate_starfield(DrawableObject* starfield, unsigned int num_stars) {
+unsigned int num_indices(Asterium* a, unsigned int num_asteriums) {
+  unsigned int count = 0;
+  for (unsigned int i = 0; i < num_asteriums; i++) {
+    count += a[i].num_connections;
+  }
+  return count;
+}
+
+void generate_starfield(DrawableObject* starfield,
+                        Star* stars, unsigned int num_stars,
+                        Asterium* asteriums, unsigned int num_asteriums) {
   Mesh s;
   Vertex v[num_stars];
-  unsigned int i[num_stars];
   s.vertices = &v[0];
-  s.indices = &i[0];
-  s.num_indices = num_stars;
   s.num_vertices = num_stars;
+  s.num_indices = 2 * num_indices(asteriums, num_asteriums);
+  unsigned int i[s.num_indices];
+  s.indices = &i[0];
+  unsigned int count = 0;
+  for (unsigned int a = 0; a < num_asteriums; a++) {
+    for (unsigned int c = 0; c < asteriums[a].num_connections; c++) {
+      i[count++] = asteriums[a].connections[c].first - 1;
+      i[count++] = asteriums[a].connections[c].second - 1;
+    }
+  }
+
+  for (unsigned int i = 0; i < count; i++) {
+    printf("%d %d\n", i, s.indices[i]);
+  }
+
   for (unsigned int i = 0; i < num_stars; i++) {
+    // Set star colour
+    s.vertices[i].colour[0] = stars[i].r;
+    s.vertices[i].colour[1] = stars[i].g;
+    s.vertices[i].colour[2] = stars[i].b;
+    s.vertices[i].colour[3] = 1.0;
+    float x, y, z;
+    x = 100000 * cos(stars[i].declin) * cos(stars[i].ascen);
+    y = 100000 * sin(stars[i].ascen);
+    z = 100000 * sin(stars[i].declin) * cos(stars[i].ascen);
     float *p = s.vertices[i].position;
     // Random 3D star position
-    *p++ = 60000000 * my_rand();
-    *p++ = 60000000 * my_rand();
-    *p++ = 60000000 * my_rand();
+    *p++ = x;
+    *p++ = y;
+    *p++ = z;
   }
   create_object(starfield, &s);
 }
@@ -256,8 +296,7 @@ bool viewable(vec4 p) {
 }
 
 static void display(GLFWwindow* window,
-                    SolarSystem* system,
-                    ShaderProgram* sp) {
+                    SolarSystem* system) {
   int width, height;
   glfwGetFramebufferSize(window, &width, &height);
   glViewport(0, 0, width, height);
@@ -266,6 +305,13 @@ static void display(GLFWwindow* window,
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   mat4x4 vp;
   calculate_vp_matrix(vp, width, height);
+  // Draw stars
+  draw_points(system->starfield, system->star_shader, vp);
+  if (options.show_asteriums) {
+    // Draw asteriums
+    draw_lines(system->starfield, system->star_shader, vp);
+  }
+
   double t =  30 * glfwGetTime();
   for (unsigned int i = 0; i < system->num_bodies; i++) {
     mat4x4 world;
@@ -273,10 +319,10 @@ static void display(GLFWwindow* window,
     mat4x4 wvp;
     mat4x4_mul(wvp, vp, world);
     bind_texture(system->body_textures[i]);
-    draw(system->body, sp, wvp);
+    draw_triangles(system->body, system->body_shader, wvp);
     vec4 coords;
     get_body_screen_coords(coords, system->config, i, vp, t);
-    set_font_colour(system->fonts->r, 255, 255, 255, 255);
+    set_font_colour(system->fonts->r, 1.0, 1.0, 1.0, 1.0);
     if (viewable(coords)) {
       render_text(system->fonts->r,
                   system->fonts->a,
@@ -289,8 +335,8 @@ static void display(GLFWwindow* window,
 }
 
 int main(int argc, char* argv[]) {
-  if (argc < 3) {
-    printf("Please supply some vertex and frag shader location\n");
+  if (argc < 1) {
+    printf("Please supply star text file\n");
     exit(EXIT_FAILURE);
   }
   GLFWwindow* window;
@@ -345,11 +391,13 @@ int main(int argc, char* argv[]) {
   unsigned int num_bodies;
   BodyProperties bodies[MAX_BODIES];
   read_solar_system(bodies, &num_bodies);
-
-  ShaderProgram sp;
-  create_program_from_files(&sp, 2, argv[1],
-                                    argv[2]);
-
+  ShaderProgram body_shader, star_shader;
+  create_program_from_files(&body_shader, 2,
+                            "../shaders/body.glslf",
+                            "../shaders/body.glslv");
+  create_program_from_files(&star_shader, 2,
+                            "../shaders/star.glslf",
+                            "../shaders/star.glslv");
   Texture* t[num_bodies];
   for (unsigned int i = 0; i < num_bodies; i++) {
     t[i] = malloc(sizeof(Texture));
@@ -362,29 +410,39 @@ int main(int argc, char* argv[]) {
   create_font_atlas(&a, "../fonts/FreeSans.ttf", 24);
   Fonts f = { .r = &r, .a = &a};
 
+  // Read stars from file
+  Star* stars = NULL;
+  unsigned int num_stars;
+  read_stars(&stars, &num_stars, argv[1]);
+  Asterium* asteriums = NULL;
+  unsigned int num_asteriums;
+  read_asteriums(&asteriums, &num_asteriums, argv[2]);
+  generate_starfield(&starfield, stars, num_stars, asteriums, num_asteriums);
+
+
   SolarSystem system;
   system.starfield = &starfield;
-  system.num_stars = NUM_STARS;
+  system.num_stars = num_stars;
+  system.star_shader = &star_shader;
   system.config = bodies;
   system.body = &sphere;
   system.num_bodies = num_bodies;
   system.body_textures = t;
+  system.body_shader = &body_shader;
   system.fonts = &f;
 
   // Set up camera
-  vec3 pos = {20000.0, 0.0, 0.0};
+  vec3 pos = {-20000.0, 0.0, 0.0};
   vec3 up = {0.0, 1.0, 0.0};
   init_camera(&camera, pos, up);
 
   glfwSetTime(0.0);
-  int run = 1;
-  /*while (run) {*/
   while (!glfwWindowShouldClose(window)) {
-    display(window, &system, &sp);
-    run = 0;
+    display(window, &system);
   }
 
-  delete_program(&sp);
+  delete_program(&star_shader);
+  delete_program(&body_shader);
   delete_mesh(&sphere_mesh);
   delete_object(&sphere);
   for (unsigned int i = 0; i < num_bodies; i++) {
@@ -393,6 +451,7 @@ int main(int argc, char* argv[]) {
   }
   delete_font_atlas(&a);
   delete_font_renderer(&r);
+  free(stars);
 
   glfwDestroyWindow(window);
   glfwTerminate();

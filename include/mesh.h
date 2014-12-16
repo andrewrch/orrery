@@ -19,7 +19,7 @@ typedef char ucvec4[4];
 
 typedef struct {
   vec3 position;
-  ucvec4 colour;
+  vec4 colour;
   vec2 tex_coords;
   vec3 normal;
 } Vertex;

@@ -17,13 +17,17 @@ typedef struct
 {
   GLuint VAO;
   GLuint buffers[NUM_BUFFERS];
-  unsigned int num_indices;
+  unsigned int num_indices, num_vertices;
   Texture* texture;
 } DrawableObject;
 
 void create_object(DrawableObject* obj, Mesh* mesh);
 void delete_object(DrawableObject* obj);
 void set_texture(DrawableObject* obj, Texture* t);
-void draw(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp);
+
+// Draw functions
+void draw_triangles(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp);
+void draw_points(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp);
+void draw_lines(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp);
 
 #endif

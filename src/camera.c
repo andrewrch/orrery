@@ -47,12 +47,23 @@ void move_right(Camera* c, float step) {
   c->eye[2] += step * cos(c->r_lon);
 }
 
+float check_bounds(float r) {
+  if (r <= deg_to_rad(-89)) {
+    return deg_to_rad(-89);
+  } else if (r >= deg_to_rad(89)) {
+    return deg_to_rad(89);
+  } else {
+    return r;
+  }
+}
 
 void rotate_up(Camera* c, float d) {
   c->r_lat += deg_to_rad(d);
+  c->r_lat = check_bounds(c->r_lat);
 }
 void rotate_down(Camera* c, float d) {
   c->r_lat -= deg_to_rad(d);
+  c->r_lat = check_bounds(c->r_lat);
 }
 void rotate_left(Camera* c, float d) {
   c->r_lon -= deg_to_rad(d);

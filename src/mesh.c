@@ -24,7 +24,7 @@ unsigned int get_attrib_offset(unsigned int attrib) {
             break;
     case 1: o = sizeof(vec3);
             break;
-    case 2: o = sizeof(ucvec4) + get_attrib_offset(1);
+    case 2: o = sizeof(vec4) + get_attrib_offset(1);
             break;
     case 3: o = sizeof(vec2) + get_attrib_offset(2);
             break;

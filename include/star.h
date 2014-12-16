@@ -9,6 +9,18 @@ typedef struct {
   float mag; // Star magnitude
 } Star;
 
-void read_stars(Star* s, unsigned int* num_stars, char* filename);
+typedef struct {
+  unsigned int first, second;
+} AsteriumConnection;
 
+typedef struct {
+  char name[4];
+  unsigned int num_connections;
+  AsteriumConnection* connections;
+} Asterium;
+
+
+void read_stars(Star** s, unsigned int* num_stars, char* filename);
+void read_asteriums(Asterium** asteriums,
+                    unsigned int* num_asteriums, char* filename);
 #endif
