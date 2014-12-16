@@ -105,6 +105,7 @@ typedef struct {
   DrawableObject* starfield;
   unsigned int num_stars;
   ShaderProgram* star_shader;
+  ShaderProgram* line_shader;
   // The planets
   DrawableObject* body;
   unsigned int num_bodies;
@@ -172,30 +173,24 @@ void generate_starfield(DrawableObject* starfield,
   unsigned int count = 0;
   for (unsigned int a = 0; a < num_asteriums; a++) {
     for (unsigned int c = 0; c < asteriums[a].num_connections; c++) {
-      i[count++] = asteriums[a].connections[c].first - 1;
-      i[count++] = asteriums[a].connections[c].second - 1;
+      i[count++] = asteriums[a].connections[c].first;
+      i[count++] = asteriums[a].connections[c].second;
     }
-  }
-
-  for (unsigned int i = 0; i < count; i++) {
-    printf("%d %d\n", i, s.indices[i]);
   }
 
   for (unsigned int i = 0; i < num_stars; i++) {
     // Set star colour
-    s.vertices[i].colour[0] = stars[i].r;
-    s.vertices[i].colour[1] = stars[i].g;
-    s.vertices[i].colour[2] = stars[i].b;
-    s.vertices[i].colour[3] = 1.0;
-    float x, y, z;
-    x = 100000 * cos(stars[i].declin) * cos(stars[i].ascen);
-    y = 100000 * sin(stars[i].ascen);
-    z = 100000 * sin(stars[i].declin) * cos(stars[i].ascen);
-    float *p = s.vertices[i].position;
-    // Random 3D star position
-    *p++ = x;
-    *p++ = y;
-    *p++ = z;
+    s.vertices[i].colour[0] = stars[i].colour[0];
+    s.vertices[i].colour[1] = stars[i].colour[1];
+    s.vertices[i].colour[2] = stars[i].colour[2];
+    // Stuff mag in as a texcoord
+    s.vertices[i].tex_coords[0] = stars[i].mag;
+    // Get star positions
+    vec3 v;
+    vec3_norm(v, stars[i].pos);
+    s.vertices[i].position[0] = 100000 * v[0];
+    s.vertices[i].position[1] = 100000 * v[1];
+    s.vertices[i].position[2] = 100000 * v[2];
   }
   create_object(starfield, &s);
 }
@@ -257,7 +252,6 @@ void get_body_screen_coords(vec4 coords, BodyProperties* bodies,
   BodyProperties* p = &bodies[bodies[body].orbits_body];
   mat4x4 R, T, world;
   float trans_x, trans_y, trans_z;
-
   mat4x4_identity(world);
   // If b is a moon
   if (b->orbits_body) {
@@ -309,10 +303,10 @@ static void display(GLFWwindow* window,
   draw_points(system->starfield, system->star_shader, vp);
   if (options.show_asteriums) {
     // Draw asteriums
-    draw_lines(system->starfield, system->star_shader, vp);
+    draw_lines(system->starfield, system->line_shader, vp);
   }
 
-  double t =  30 * glfwGetTime();
+  double t = 30 * glfwGetTime();
   for (unsigned int i = 0; i < system->num_bodies; i++) {
     mat4x4 world;
     calculate_body_world_matrix(world, system->config, i, t);
@@ -322,7 +316,7 @@ static void display(GLFWwindow* window,
     draw_triangles(system->body, system->body_shader, wvp);
     vec4 coords;
     get_body_screen_coords(coords, system->config, i, vp, t);
-    set_font_colour(system->fonts->r, 1.0, 1.0, 1.0, 1.0);
+    set_font_colour(system->fonts->r, 1.0, 1.0, 1.0, 0.5);
     if (viewable(coords)) {
       render_text(system->fonts->r,
                   system->fonts->a,
@@ -374,8 +368,7 @@ int main(int argc, char* argv[]) {
   glEnable(GL_DEPTH_TEST);
   glDepthMask(GL_TRUE);
   glClearColor(.0f, .0f, .0f, .0f);
-
-  /*glPolygonMode( GL_FRONT_AND_BACK, GL_LINE  );*/
+  glEnable(GL_PROGRAM_POINT_SIZE);
 
   // Make a sphere
   Mesh sphere_mesh;
@@ -384,20 +377,20 @@ int main(int argc, char* argv[]) {
   DrawableObject sphere;
   create_object(&sphere, &sphere_mesh);
 
-  DrawableObject starfield;
-  //generate_starfield(&starfield, 1000);
-
   // Read the data
   unsigned int num_bodies;
   BodyProperties bodies[MAX_BODIES];
   read_solar_system(bodies, &num_bodies);
-  ShaderProgram body_shader, star_shader;
+  ShaderProgram body_shader, star_shader, line_shader;
   create_program_from_files(&body_shader, 2,
                             "../shaders/body.glslf",
                             "../shaders/body.glslv");
   create_program_from_files(&star_shader, 2,
                             "../shaders/star.glslf",
                             "../shaders/star.glslv");
+  create_program_from_files(&line_shader, 2,
+                            "../shaders/lines.glslf",
+                            "../shaders/lines.glslv");
   Texture* t[num_bodies];
   for (unsigned int i = 0; i < num_bodies; i++) {
     t[i] = malloc(sizeof(Texture));
@@ -417,6 +410,7 @@ int main(int argc, char* argv[]) {
   Asterium* asteriums = NULL;
   unsigned int num_asteriums;
   read_asteriums(&asteriums, &num_asteriums, argv[2]);
+  DrawableObject starfield;
   generate_starfield(&starfield, stars, num_stars, asteriums, num_asteriums);
 
 
@@ -424,6 +418,7 @@ int main(int argc, char* argv[]) {
   system.starfield = &starfield;
   system.num_stars = num_stars;
   system.star_shader = &star_shader;
+  system.line_shader = &line_shader;
   system.config = bodies;
   system.body = &sphere;
   system.num_bodies = num_bodies;

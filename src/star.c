@@ -4,28 +4,25 @@
 #include <string.h>
 
 enum important_fields {
-  ID = 1,
+  ID = 0,
   BAYER = 27,
   NAME = 6,
-  RA = 7,
-  DEC = 8,
   MAG = 13,
+  X = 17,
+  Y = 18,
+  Z = 19,
   COLOUR = 16,
 };
-
-void print_star(Star* s) {
-  printf("Star %d, %s, %s\n", s->id, s->proper_name, s->bayer_name);
-  printf("Equitorial coordinates: %f, %f\n", s->ascen, s->declin);
-  printf("Magnitude: %f\n", s->mag);
-  printf("Colour (%f, %f, %f)\n", s->r, s->g, s->b);
-}
 
 /* Borrowed from here:
  *
  * http://stackoverflow.com/questions/21977786/star-b-v-color-index-to-apparent-rgb-color
  */
-void calculate_colour_from_index(float* r, float* g, float* b, float bv) {
+void calculate_colour_from_index(vec4 c, float bv) {
   float t;
+  float *r = &c[0];
+  float *g = &c[1];
+  float *b = &c[2];
   *r=0.0; *g=0.0; *b=0.0;
   if (bv < -0.4) t=-0.4; if (bv > 2.0) t= 2.0;
        if ((bv>=-0.40)&&(bv<0.00)) { t=(bv+0.40)/(0.00+0.40); *r=0.61+(0.11*t)+(0.1*t*t); }
@@ -62,18 +59,22 @@ void read_star_from_line(Star* s, char* line) {
         case NAME:
           sscanf(current_c, "%[^,]", s->proper_name);
           break;
-        case RA:
-          sscanf(current_c, "%f", &s->ascen);
-          break;
-        case DEC:
-          sscanf(current_c, "%f", &s->declin);
-          break;
         case MAG:
           sscanf(current_c, "%f", &s->mag);
           break;
+        case X:
+          sscanf(current_c, "%f", &s->pos[0]);
+          break;
+        case Y:
+          sscanf(current_c, "%f", &s->pos[1]);
+          break;
+        case Z:
+          sscanf(current_c, "%f", &s->pos[2]);
+          break;
         case COLOUR:
           sscanf(current_c, "%f", &i);
-          calculate_colour_from_index(&s->r, &s->g, &s->b, i);
+          calculate_colour_from_index(s->colour, i);
+          break;
         default:
           break;
       }
@@ -130,7 +131,7 @@ void read_asteriums(Asterium** asteriums,
                     unsigned int* num_asteriums, char* filename) {
   FILE* f = fopen(filename, "r");
   if (!f) {
-    fprintf(stderr, "Could not open star file %s\n", filename);
+    fprintf(stderr, "Could not open asterium file %s\n", filename);
   }
   // Count number of asteriums from file
   unsigned int num_lines = 0;
@@ -148,13 +149,4 @@ void read_asteriums(Asterium** asteriums,
     read_asterium_from_line(&((*asteriums)[i++]), line);
   }
   fclose(f);
-
-  for (unsigned int i = 0; i < *num_asteriums; i++) {
-    Asterium* a = &(*asteriums)[i];
-    printf("Ast: %s %d\n", a->name, a->num_connections);
-    for (unsigned int j = 0; j < a->num_connections; j++) {
-      printf("%d %d ", a->connections[j].first, a->connections[j].second);
-    }
-    printf("\n");
-  }
 }

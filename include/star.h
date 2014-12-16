@@ -1,11 +1,13 @@
 #ifndef STAR_H
 #define STAR_H
 
+#include "linear_algebra.h"
+
 typedef struct {
   unsigned int id;
   char proper_name[20], bayer_name[20];
-  float ascen, declin; // Equitorial coordinates
-  float r, g, b; // Colour
+  vec3 pos;
+  vec4 colour;
   float mag; // Star magnitude
 } Star;
 

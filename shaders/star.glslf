@@ -10,7 +10,11 @@ out vec4 output_colour;
 
 void main()
 {
-  // Set colour to the texture colour
-  output_colour = data_in.colour;
-  //output_colour = vec4(1.0, 1.0, 1.0, 1.0);
+  vec2 coord = gl_PointCoord - vec2(0.5);  //from [0,1] to [-0.5,0.5]
+  // Make points circular
+  float len = length(coord);
+  if(len > 0.5)
+    discard;
+  // And give colour alpha a soft fall off so it looks nicer
+  output_colour = vec4(data_in.colour.xyz, 1.0 - 2*len);
 }

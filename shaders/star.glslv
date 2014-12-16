@@ -15,9 +15,10 @@ out Data {
 
 void main()
 {
+  // Set point size according to magnitude
+  gl_PointSize = 3 - (int(tex_coord.x) / 4);
   data_out.colour = colour;
   data_out.normal = normal;
   data_out.tex_coord = tex_coord;
-
   gl_Position = WVP * vec4(position, 1.0);
 }
