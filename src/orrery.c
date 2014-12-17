@@ -64,7 +64,6 @@ static void key_callback(GLFWwindow* window, int key, int scancode,
     rotate_down(&camera, angle);
   }
   if (key == GLFW_KEY_C && action == GLFW_PRESS) {
-    printf("Toggled asteriums\n");
     options.show_asteriums = !options.show_asteriums;
   }
 
@@ -105,6 +104,7 @@ typedef struct {
   DrawableObject* starfield;
   unsigned int num_stars;
   ShaderProgram* star_shader;
+  ShaderProgram* sun_shader;
   ShaderProgram* line_shader;
   // The planets
   DrawableObject* body;
@@ -195,85 +195,61 @@ void generate_starfield(DrawableObject* starfield,
   create_object(starfield, &s);
 }
 
-void calculate_body_world_matrix(mat4x4 world,
-                                 BodyProperties* bodies,
-                                 unsigned int body,
-                                 double t) {
+void calculate_world_matrices(mat4x4 body_world,
+                              mat4x4 text_world,
+                              BodyProperties* bodies,
+                              unsigned int body,
+                              double t) {
   BodyProperties* b = &bodies[body];
   BodyProperties* p = &bodies[bodies[body].orbits_body];
   mat4x4 S, R, T;
-  float trans_x, trans_z;
+  float trans_x, trans_y, trans_z;
 
-  mat4x4_identity(world);
+  mat4x4_identity(body_world);
   // First scale to the correct size
   mat4x4_scale(S, b->radius, b->radius, b->radius);
-  mat4x4_mul(world, S, world);
+  mat4x4_mul(body_world, S, body_world);
   // Rotate to hour in the day
   mat4x4_rotate(R, 0, 1, 0, t / b->rot_period);
-  mat4x4_mul(world, R, world);
+  mat4x4_mul(body_world, R, body_world);
   // And now rotate for axial tilt
   mat4x4_rotate(R, 1, 0, 0, deg_to_rad(b->axis_tilt));
-  mat4x4_mul(world, R, world);
+  mat4x4_mul(body_world, R, body_world);
   // If b is a moon
   if (b->orbits_body) {
     trans_x = p->orbital_radius * sin(t / p->orbital_period);
     trans_z = p->orbital_radius * cos(t / p->orbital_period);
     mat4x4_translate(T, trans_x, 0.0, trans_z);
-    mat4x4_mul(world, T, world);
+    mat4x4_mul(body_world, T, body_world);
     // Rotate by orbital tilt
     mat4x4_rotate(R, 0, 0, 1, deg_to_rad(p->orbital_tilt));
-    mat4x4_mul(world, R, world);
+    mat4x4_mul(body_world, R, body_world);
   }
-  // Move to correct position
+  // Duplicate matrix up to this point
+  mat4x4_dup(text_world, body_world);
+  // Move body to correct position
   trans_x = b->orbital_radius * sin(t / b->orbital_period);
   trans_z = b->orbital_radius * cos(t / b->orbital_period);
   mat4x4_translate(T, trans_x, 0.0, trans_z);
-  mat4x4_mul(world, T, world);
-  // Rotate by orbital tilt
-  mat4x4_rotate(R, 0, 0, 1, deg_to_rad(b->orbital_tilt));
-  mat4x4_mul(world, R, world);
-}
+  mat4x4_mul(body_world, T, body_world);
 
-void calculate_vp_matrix(mat4x4 vp, int w, int h) {
-  // Sort out view and proj
-  mat4x4 proj;
-  mat4x4_perspective(proj, deg_to_rad(30.0),
-                     w/ (float) h, 0.1, 200000.0f);
-  mat4x4 view;
-  get_view_matrix(&camera, view);
-  // Combine in VP matrix
-  mat4x4_mul(vp, proj, view);
-}
-
-void get_body_screen_coords(vec4 coords, BodyProperties* bodies,
-                            unsigned int body, mat4x4 vp,
-                            double t) {
-  BodyProperties* b = &bodies[body];
-  BodyProperties* p = &bodies[bodies[body].orbits_body];
-  mat4x4 R, T, world;
-  float trans_x, trans_y, trans_z;
-  mat4x4_identity(world);
-  // If b is a moon
-  if (b->orbits_body) {
-    trans_x = p->orbital_radius * sin(t / p->orbital_period);
-    trans_z = p->orbital_radius * cos(t / p->orbital_period);
-    mat4x4_translate(T, trans_x, 0.0, trans_z);
-    mat4x4_mul(world, T, world);
-    // Rotate by orbital tilt
-    mat4x4_rotate(R, 0, 0, 1, deg_to_rad(p->orbital_tilt));
-    mat4x4_mul(world, R, world);
-  }
-  // Move to correct position
-  trans_x = b->orbital_radius * sin(t / b->orbital_period);
-  trans_z = b->orbital_radius * cos(t / b->orbital_period);
+  // Move text to correct position
   trans_y = 1.1 * b->radius;
   mat4x4_translate(T, trans_x, trans_y, trans_z);
-  mat4x4_mul(world, T, world);
+  mat4x4_mul(text_world, T, text_world);
   // Rotate by orbital tilt
   mat4x4_rotate(R, 0, 0, 1, deg_to_rad(b->orbital_tilt));
-  mat4x4_mul(world, R, world);
-  mat4x4 wvp;
-  mat4x4_mul(wvp, vp, world);
+  mat4x4_mul(body_world, R, body_world);
+  mat4x4_mul(text_world, R, text_world);
+}
+
+void get_proj_matrix(mat4x4 proj, int w, int h) {
+  // Sort out view and proj
+  mat4x4_perspective(proj, deg_to_rad(30.0),
+                     w/ (float) h, 0.1, 200000.0f);
+}
+
+void get_text_screen_coords(vec4 coords, mat4x4 wvp) {
   vec4 origin = {0, 0, 0, 1};
   mat4x4_mul_vec4(coords, wvp, origin);
   // Perspective division
@@ -289,6 +265,21 @@ bool viewable(vec4 p) {
  return r;
 }
 
+void draw_stars(DrawableObject* starfield,
+                ShaderProgram* star_shader,
+                ShaderProgram* line_shader,
+                mat4x4 wvp) {
+  bind_program(star_shader);
+  add_mat4x4_uniform(star_shader, "WVP", wvp);
+  draw_points(starfield);
+  if (options.show_asteriums) {
+    // Draw asteriums
+    bind_program(line_shader);
+    add_mat4x4_uniform(line_shader, "WVP", wvp);
+    draw_lines(starfield);
+  }
+}
+
 static void display(GLFWwindow* window,
                     SolarSystem* system) {
   int width, height;
@@ -297,25 +288,53 @@ static void display(GLFWwindow* window,
   float sx = 2.0 / width;
   float sy = 2.0 / height;
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  mat4x4 vp;
-  calculate_vp_matrix(vp, width, height);
+  mat4x4 view, proj, vp;
+  get_proj_matrix(proj, width, height);
+  get_view_matrix(view, &camera);
+  mat4x4_mul(vp, proj, view);
   // Draw stars
-  draw_points(system->starfield, system->star_shader, vp);
-  if (options.show_asteriums) {
-    // Draw asteriums
-    draw_lines(system->starfield, system->line_shader, vp);
-  }
+  draw_stars(system->starfield, system->star_shader,
+             system->line_shader, vp);
 
   double t = 30 * glfwGetTime();
   for (unsigned int i = 0; i < system->num_bodies; i++) {
-    mat4x4 world;
-    calculate_body_world_matrix(world, system->config, i, t);
-    mat4x4 wvp;
-    mat4x4_mul(wvp, vp, world);
+    mat4x4 body_world, text_world;
+    calculate_world_matrices(body_world, text_world,
+                             system->config, i, t);
+    mat4x4 body_wvp;
+    mat4x4_mul(body_wvp, vp, body_world);
+    if (i == 0) {
+      bind_program(system->sun_shader);
+      add_float_uniform(system->body_shader, "time", t);
+    } else {
+      bind_program(system->body_shader);
+    }
     bind_texture(system->body_textures[i]);
-    draw_triangles(system->body, system->body_shader, wvp);
+    add_int_uniform(system->body_shader, "texture_unit", 0);
+    add_mat4x4_uniform(system->body_shader, "WVP", body_wvp);
+    // World view matrix
+    mat4x4 wv;
+    mat4x4_mul(wv, view, body_world);
+    add_mat4x4_uniform(system->body_shader, "WV", wv);
+
+    // Normal matrix
+    mat4x4 wv_inv, n;
+    mat4x4_invert(wv_inv, wv);
+    mat4x4_transpose(n, wv_inv);
+    add_mat4x4_uniform(system->body_shader, "N", n);
+
+    // Light position
+    vec4 sun = {0, 0, 0, 1};
+    mat4x4_mul_vec4(sun, view, sun);
+    vec3 sun_pos = {sun[0], sun[1], sun[2]};
+    add_vec3_uniform(system->body_shader, "sun_pos", sun_pos);
+
+    // Draw body
+    draw_triangles(system->body);
     vec4 coords;
-    get_body_screen_coords(coords, system->config, i, vp, t);
+    mat4x4 text_wvp;
+    mat4x4_mul(text_wvp, vp, text_world);
+    get_text_screen_coords(coords, text_wvp);
     set_font_colour(system->fonts->r, 1.0, 1.0, 1.0, 0.5);
     if (viewable(coords)) {
       render_text(system->fonts->r,
@@ -381,10 +400,13 @@ int main(int argc, char* argv[]) {
   unsigned int num_bodies;
   BodyProperties bodies[MAX_BODIES];
   read_solar_system(bodies, &num_bodies);
-  ShaderProgram body_shader, star_shader, line_shader;
+  ShaderProgram body_shader, star_shader, line_shader, sun_shader;
   create_program_from_files(&body_shader, 2,
                             "../shaders/body.glslf",
                             "../shaders/body.glslv");
+  create_program_from_files(&sun_shader, 2,
+                            "../shaders/sun.glslf",
+                            "../shaders/sun.glslv");
   create_program_from_files(&star_shader, 2,
                             "../shaders/star.glslf",
                             "../shaders/star.glslv");
@@ -419,6 +441,7 @@ int main(int argc, char* argv[]) {
   system.num_stars = num_stars;
   system.star_shader = &star_shader;
   system.line_shader = &line_shader;
+  system.sun_shader = &sun_shader;
   system.config = bodies;
   system.body = &sphere;
   system.num_bodies = num_bodies;

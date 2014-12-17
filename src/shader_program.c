@@ -138,6 +138,11 @@ void add_vec4_uniform(ShaderProgram* s, char* n, vec4 v) {
   glUniform4fv(loc, 1, v);
 }
 
+void add_vec3_uniform(ShaderProgram* s, char* n, vec3 v) {
+  GLint loc = glGetUniformLocation(s->id, n);
+  glUniform3fv(loc, 1, v);
+}
+
 void add_mat4x4_uniform(ShaderProgram* s, char* n, mat4x4 m) {
   GLint loc = glGetUniformLocation(s->id, n);
   glUniformMatrix4fv(loc , 1, false, (GLfloat*)m);

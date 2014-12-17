@@ -426,42 +426,28 @@ static inline void mat4x4_perspective(mat4x4 m, float y_fov, float aspect, float
 }
 static inline void mat4x4_look_at(mat4x4 m, vec3 eye, vec3 center, vec3 up)
 {
-  /* Adapted from Android's OpenGL Matrix.java.                        */
-  /* See the OpenGL GLUT documentation for gluLookAt for a description */
-  /* of the algorithm. We implement it in a straightforward way:       */
-
-  /* TODO: The negation of of can be spared by swapping the order of
-   *       operands in the following cross products in the right way. */
+  // Taken from GLM implementation
   vec3 f;
   vec3_sub(f, center, eye);
   vec3_norm(f, f);
-
   vec3 s;
   vec3_mul_cross(s, f, up);
   vec3_norm(s, s);
-
   vec3 t;
   vec3_mul_cross(t, s, f);
-
+  mat4x4_identity(m);
   m[0][0] =  s[0];
   m[1][0] =  s[1];
   m[2][0] =  s[2];
-  m[3][0] =   0.f;
-
   m[0][1] =  t[0];
   m[1][1] =  t[1];
   m[2][1] =  t[2];
-  m[3][1] =   0.f;
-
   m[0][2] = -f[0];
   m[1][2] = -f[1];
   m[2][2] = -f[2];
-  m[3][2] =   0.f;
-
   m[3][0] = -vec3_mul_inner(s, eye);
   m[3][1] = -vec3_mul_inner(t, eye);
   m[3][2] =  vec3_mul_inner(f, eye);
-  m[3][3] =  1.f;
 }
 
 typedef float quat[4];

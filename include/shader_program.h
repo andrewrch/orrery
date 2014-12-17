@@ -19,6 +19,7 @@ void bind_program(ShaderProgram* s);
 void add_float_uniform(ShaderProgram* s, char* n, float f);
 void add_int_uniform(ShaderProgram* s, char* n, int i);
 void add_vec4_uniform(ShaderProgram* s, char* n, vec4 v);
+void add_vec3_uniform(ShaderProgram* s, char* n, vec3 v);
 void add_mat4x4_uniform(ShaderProgram* s, char* n, mat4x4 m);
 unsigned int get_attrib_location(ShaderProgram* s, char* n);
 
