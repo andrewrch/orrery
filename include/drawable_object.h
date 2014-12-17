@@ -26,8 +26,8 @@ void delete_object(DrawableObject* obj);
 void set_texture(DrawableObject* obj, Texture* t);
 
 // Draw functions
-void draw_triangles(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp);
-void draw_points(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp);
-void draw_lines(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp);
+void draw_triangles(DrawableObject* obj);
+void draw_points(DrawableObject* obj);
+void draw_lines(DrawableObject* obj);
 
 #endif

@@ -15,7 +15,7 @@ static inline double deg_to_rad(double deg) {
   return deg * 0.017453293;
 }
 
-void get_view_matrix(Camera* c, mat4x4 view) {
+void get_view_matrix(mat4x4 view, Camera* c) {
   // Calculate target
   vec3 target;
   target[0] = c->eye[0] + cos(c->r_lat) * cos(c->r_lon);

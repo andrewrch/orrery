@@ -82,20 +82,16 @@ void set_texture(DrawableObject* obj, Texture* t) {
   obj->texture = t;
 }
 
-void draw_points(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp)
+void draw_points(DrawableObject* obj)
 {
   glBindVertexArray(obj->VAO);
-  bind_program(sp);
-  add_mat4x4_uniform(sp, "WVP", wvp);
   glDrawArrays(GL_POINTS, 0, obj->num_vertices);
   glBindVertexArray(0);
 }
 
-void draw_lines(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp)
+void draw_lines(DrawableObject* obj)
 {
   glBindVertexArray(obj->VAO);
-  bind_program(sp);
-  add_mat4x4_uniform(sp, "WVP", wvp);
   glDrawElements(GL_LINES,
                  obj->num_indices,
                  GL_UNSIGNED_INT,
@@ -104,16 +100,13 @@ void draw_lines(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp)
 }
 
 
-void draw_triangles(DrawableObject* obj, ShaderProgram* sp, mat4x4 wvp)
+void draw_triangles(DrawableObject* obj)
 {
   glBindVertexArray(obj->VAO);
-  bind_program(sp);
   if (obj->texture) {
     bind_texture(obj->texture);
     glActiveTexture(GL_TEXTURE0);
-    add_int_uniform(sp, "texture_unit", 0);
   }
-  add_mat4x4_uniform(sp, "WVP", wvp);
   glDrawElements(GL_TRIANGLES,
                  obj->num_indices,
                  GL_UNSIGNED_INT,

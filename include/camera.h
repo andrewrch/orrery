@@ -11,7 +11,7 @@ typedef struct {
 } Camera;
 
 void init_camera(Camera* c, vec3 pos, vec3 eye);
-void get_view_matrix(Camera* c, mat4x4 view);
+void get_view_matrix(mat4x4 view, Camera* c);
 
 void move_forward(Camera* c, float step);
 void move_backwards(Camera* c, float step);
