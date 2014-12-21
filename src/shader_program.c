@@ -56,7 +56,14 @@ void link_program(ShaderProgram* sp) {
     fprintf(stderr, "Shader link failure\n%s", info_log);
   }
 
+  for (unsigned int i = 0; i < sp->num_shaders; i++) {
+    glDetachShader(sp->id, sp->shaders[i]->id);
+  }
+}
+
+void validate_program(ShaderProgram* sp) {
   // Validate that it'll all work fine with this GL profile
+  GLint status;
   glValidateProgram(sp->id);
   glGetProgramiv(sp->id, GL_VALIDATE_STATUS, &status);
   if (status == GL_FALSE) {
@@ -65,9 +72,6 @@ void link_program(ShaderProgram* sp) {
     GLchar info_log[len];
     glGetProgramInfoLog (sp->id, len, NULL, info_log);
     fprintf(stderr, "Shader validation failed\n%s", info_log);
-  }
-  for (unsigned int i = 0; i < sp->num_shaders; i++) {
-    glDetachShader(sp->id, sp->shaders[i]->id);
   }
 }
 

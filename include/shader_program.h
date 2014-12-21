@@ -15,6 +15,7 @@ void create_program_from_files(ShaderProgram* sp, unsigned int num, ...);
 void create_program_from_shaders(ShaderProgram* sp, unsigned int num, ...);
 void delete_program(ShaderProgram* sp);
 void bind_program(ShaderProgram* s);
+void validate_program(ShaderProgram* s);
 
 void add_float_uniform(ShaderProgram* s, char* n, float f);
 void add_int_uniform(ShaderProgram* s, char* n, int i);

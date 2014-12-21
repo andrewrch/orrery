@@ -11,10 +11,6 @@ void init_camera(Camera* c, vec3 eye, vec3 up) {
   c->r_lon = 0;
 }
 
-static inline double deg_to_rad(double deg) {
-  return deg * 0.017453293;
-}
-
 void get_view_matrix(mat4x4 view, Camera* c) {
   // Calculate target
   vec3 target;

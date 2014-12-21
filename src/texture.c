@@ -13,7 +13,21 @@ void unbind_texture()
   glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-int create_texture(Texture* t, char* filename)
+void bind_texture_cube(Texture* t)
+{
+  glBindTexture(GL_TEXTURE_CUBE_MAP, t->id);
+}
+
+void unbind_texture_cube()
+{
+  glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+}
+
+void init_texture(Texture* t) {
+  glGenTextures(1, &t->id);
+}
+
+bool create_texture_from_file(Texture* t, char* filename)
 {
   FILE *file = fopen(filename, "rb");
   if (!file)
@@ -47,8 +61,8 @@ int create_texture(Texture* t, char* filename)
   jpeg_destroy_decompress(&info);
   fclose(file);
 
-  glGenTextures(1, &t->id);
-  glBindTexture(GL_TEXTURE_2D, t->id);
+  init_texture(t);
+  bind_texture(t);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

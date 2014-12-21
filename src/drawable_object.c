@@ -104,8 +104,9 @@ void draw_triangles(DrawableObject* obj)
 {
   glBindVertexArray(obj->VAO);
   if (obj->texture) {
-    bind_texture(obj->texture);
+    printf("binding texture\n");
     glActiveTexture(GL_TEXTURE0);
+    bind_texture(obj->texture);
   }
   glDrawElements(GL_TRIANGLES,
                  obj->num_indices,

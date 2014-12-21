@@ -10,6 +10,7 @@
 #include "star.h"
 #include "text.h"
 #include "camera.h"
+#include "shadow_map.h"
 
 #define MAX_BODIES 20
 #define NUM_STARS 1000
@@ -21,10 +22,6 @@ typedef struct {
 
 Camera camera;
 OrreryOptions options;
-
-static inline double deg_to_rad(double deg) {
-  return deg * 0.017453293;
-}
 
 static void error_callback(int error, const char* description) {
   fprintf(stderr, "%s: %d\n", description, error);
@@ -114,6 +111,8 @@ typedef struct {
   Texture** body_textures;
   // Fonts
   Fonts* fonts;
+  // Shadows
+  ShadowMap* shadows;
 } SolarSystem;
 
 float my_rand (void)
@@ -164,12 +163,12 @@ void generate_starfield(DrawableObject* starfield,
                         Star* stars, unsigned int num_stars,
                         Asterium* asteriums, unsigned int num_asteriums) {
   Mesh s;
-  Vertex v[num_stars];
-  s.vertices = &v[0];
+  Vertex* v = malloc (num_stars * sizeof(Vertex));
+  s.vertices = v;
   s.num_vertices = num_stars;
   s.num_indices = 2 * num_indices(asteriums, num_asteriums);
-  unsigned int i[s.num_indices];
-  s.indices = &i[0];
+  unsigned int* i = malloc(s.num_indices * sizeof(unsigned int));
+  s.indices = i;
   unsigned int count = 0;
   for (unsigned int a = 0; a < num_asteriums; a++) {
     for (unsigned int c = 0; c < asteriums[a].num_connections; c++) {
@@ -193,6 +192,8 @@ void generate_starfield(DrawableObject* starfield,
     s.vertices[i].position[2] = 100000 * v[2];
   }
   create_object(starfield, &s);
+  free(s.vertices);
+  free(s.indices);
 }
 
 void calculate_world_matrices(mat4x4 body_world,
@@ -282,60 +283,93 @@ void draw_stars(DrawableObject* starfield,
 
 static void display(GLFWwindow* window,
                     SolarSystem* system) {
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  double t = 30 * glfwGetTime();
+  // We use these for shadow pass and render pass so keep them here
+  mat4x4 body_world[system->num_bodies],
+         text_world[system->num_bodies];
+  for (unsigned int i = 0; i < system->num_bodies; i++) {
+    calculate_world_matrices(body_world[i], text_world[i],
+                             system->config, i, t);
+  }
+  // Shadow pass - render all shadows
+  for (unsigned int face = 0; face < 6; face++) {
+    bind_shadow_map(system->shadows, face);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    // Start from 1 to ignore sun
+    for (unsigned int i = 1; i < system->num_bodies; i++) {
+      draw_to_omnidirectional_shadow_map(system->shadows,
+                                         face,
+                                         system->body,
+                                         body_world[i]);
+    }
+  }
+  unbind_shadow_map();
+
   int width, height;
   glfwGetFramebufferSize(window, &width, &height);
-  glViewport(0, 0, width, height);
   float sx = 2.0 / width;
   float sy = 2.0 / height;
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  // Calculate view and proj matrices given camera position
   mat4x4 view, proj, vp;
   get_proj_matrix(proj, width, height);
+
   get_view_matrix(view, &camera);
   mat4x4_mul(vp, proj, view);
+  glViewport(0, 0, width, height);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   // Draw stars
   draw_stars(system->starfield, system->star_shader,
              system->line_shader, vp);
 
-  double t = 30 * glfwGetTime();
+  // Now draw all bodies
   for (unsigned int i = 0; i < system->num_bodies; i++) {
-    mat4x4 body_world, text_world;
-    calculate_world_matrices(body_world, text_world,
-                             system->config, i, t);
     mat4x4 body_wvp;
-    mat4x4_mul(body_wvp, vp, body_world);
+    mat4x4_mul(body_wvp, vp, body_world[i]);
     if (i == 0) {
       bind_program(system->sun_shader);
       add_float_uniform(system->body_shader, "time", t);
     } else {
       bind_program(system->body_shader);
     }
+    glActiveTexture(GL_TEXTURE0);
     bind_texture(system->body_textures[i]);
-    add_int_uniform(system->body_shader, "texture_unit", 0);
+    add_int_uniform(system->body_shader, "surface", 0);
     add_mat4x4_uniform(system->body_shader, "WVP", body_wvp);
     // World view matrix
     mat4x4 wv;
-    mat4x4_mul(wv, view, body_world);
+    mat4x4_mul(wv, view, body_world[i]);
     add_mat4x4_uniform(system->body_shader, "WV", wv);
-
     // Normal matrix
     mat4x4 wv_inv, n;
     mat4x4_invert(wv_inv, wv);
     mat4x4_transpose(n, wv_inv);
     add_mat4x4_uniform(system->body_shader, "N", n);
-
-    // Light position
+    add_mat4x4_uniform(system->body_shader, "W", body_world[i]);
+    // Light position in camera space
     vec4 sun = {0, 0, 0, 1};
     mat4x4_mul_vec4(sun, view, sun);
     vec3 sun_pos = {sun[0], sun[1], sun[2]};
     add_vec3_uniform(system->body_shader, "sun_pos", sun_pos);
-
     // Draw body
+
+    //add_mat4x4_uniform(system->body_shader, "light_proj", light_proj);
+    add_int_uniform(system->body_shader, "shadow", 1);
+
+    // Bind shadow map
+    glActiveTexture(GL_TEXTURE1);
+    bind_texture_cube(&system->shadows->shadow_map);
+    //validate_program(system->body_shader);
+    if (i!=0)
     draw_triangles(system->body);
+    unbind_texture_cube();
+    // Draw text
     vec4 coords;
     mat4x4 text_wvp;
-    mat4x4_mul(text_wvp, vp, text_world);
+    mat4x4_mul(text_wvp, vp, text_world[i]);
     get_text_screen_coords(coords, text_wvp);
     set_font_colour(system->fonts->r, 1.0, 1.0, 1.0, 0.5);
+    glActiveTexture(GL_TEXTURE0);
     if (viewable(coords)) {
       render_text(system->fonts->r,
                   system->fonts->a,
@@ -391,7 +425,7 @@ int main(int argc, char* argv[]) {
 
   // Make a sphere
   Mesh sphere_mesh;
-  create_sphere(&sphere_mesh, 1.0f, 50, 50);
+  create_sphere(&sphere_mesh, 1.0f, 20, 20);
 
   DrawableObject sphere;
   create_object(&sphere, &sphere_mesh);
@@ -416,7 +450,7 @@ int main(int argc, char* argv[]) {
   Texture* t[num_bodies];
   for (unsigned int i = 0; i < num_bodies; i++) {
     t[i] = malloc(sizeof(Texture));
-    create_texture(t[i], bodies[i].tex_location);
+    create_texture_from_file(t[i], bodies[i].tex_location);
   }
 
   FontRenderer r;
@@ -435,6 +469,9 @@ int main(int argc, char* argv[]) {
   DrawableObject starfield;
   generate_starfield(&starfield, stars, num_stars, asteriums, num_asteriums);
 
+  ShadowMap shadows;
+  vec3 sun_pos = {0, 0, 0};
+  init_omnidirectional_shadow_map(&shadows, 1024, 1024, sun_pos);
 
   SolarSystem system;
   system.starfield = &starfield;
@@ -448,6 +485,7 @@ int main(int argc, char* argv[]) {
   system.body_textures = t;
   system.body_shader = &body_shader;
   system.fonts = &f;
+  system.shadows = &shadows;
 
   // Set up camera
   vec3 pos = {-20000.0, 0.0, 0.0};
