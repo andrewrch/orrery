@@ -12,6 +12,11 @@ typedef unsigned int uvec4[4];
 
 #include "linmath.h"
 
+static double deg_to_rad(double deg) {
+  return deg * 0.017453293;
+}
+
+
 //typedef float vec3[3];
 //typedef float vec4[4];
 //typedef vec4 mat4x4[4];

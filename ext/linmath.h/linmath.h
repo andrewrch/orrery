@@ -30,6 +30,12 @@ static inline float vec3_mul_inner(vec3 const a, vec3 const b)
     p += b[i] * a[i];
   return p;
 }
+static inline void vec3_dup(vec3 r, vec3 const a)
+{
+  int i;
+  for (i = 0; i < 3; ++i)
+    r[i] = a[i];
+}
 static inline void vec3_mul_cross(vec3 r, vec3 const a, vec3 const b)
 {
   r[0] = a[1] * b[2] - a[2] * b[1];
