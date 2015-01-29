@@ -82,10 +82,10 @@ typedef struct {
   float          r, g, b;        /* colour */
   float          orbital_radius; /* distance to parent body (km) */
   float          orbital_tilt;   /* angle of orbit wrt ecliptic (deg) */
-  float          orbital_period; /* time taken to orbit (days) */
+  float          orbital_period; /* time taken to orbit (earth years) */
   float          radius;         /* radius of body (km) */
   float          axis_tilt;      /* tilt of axis wrt body's orbital plane (deg) */
-  float          rot_period;     /* body's period of rotation (days) */
+  float          rot_period;     /* body's period of rotation (earth days) */
   unsigned int   orbits_body;    /* identifier of parent body */
 } BodyProperties;
 
@@ -100,26 +100,21 @@ typedef struct {
   // The stars
   DrawableObject* starfield;
   unsigned int num_stars;
+  // Shaders
   ShaderProgram* star_shader;
   ShaderProgram* sun_shader;
   ShaderProgram* line_shader;
+  ShaderProgram* body_shader;
   // The planets
   DrawableObject* body;
   unsigned int num_bodies;
-  ShaderProgram* body_shader;
   // A texture for each body
   Texture** body_textures;
   // Fonts
   Fonts* fonts;
-  // Shadows
+  // Shadow map for eclipse
   ShadowMap* shadows;
 } SolarSystem;
-
-float my_rand (void)
-{
-  /* return a random float in the range [0,1] */
-  return (float) rand() / RAND_MAX;
-}
 
 void read_solar_system(BodyProperties* bodies, unsigned int* num_bodies)
 {
@@ -146,7 +141,8 @@ void read_solar_system(BodyProperties* bodies, unsigned int* num_bodies)
       &bodies[i].rot_period,
       &bodies[i].orbits_body);
 
-    bodies[i].radius*= 1000.0;
+    bodies[i].radius /= 1000.0f;
+    bodies[i].orbital_radius /= 50000.0f;
   }
   fclose(f);
 }
@@ -187,9 +183,9 @@ void generate_starfield(DrawableObject* starfield,
     // Get star positions
     vec3 v;
     vec3_norm(v, stars[i].pos);
-    s.vertices[i].position[0] = 100000 * v[0];
-    s.vertices[i].position[1] = 100000 * v[1];
-    s.vertices[i].position[2] = 100000 * v[2];
+    s.vertices[i].position[0] = 150000 * v[0];
+    s.vertices[i].position[1] = 150000 * v[1];
+    s.vertices[i].position[2] = 150000 * v[2];
   }
   create_object(starfield, &s);
   free(s.vertices);
@@ -247,7 +243,7 @@ void calculate_world_matrices(mat4x4 body_world,
 void get_proj_matrix(mat4x4 proj, int w, int h) {
   // Sort out view and proj
   mat4x4_perspective(proj, deg_to_rad(30.0),
-                     w/ (float) h, 0.1, 200000.0f);
+                     w/ (float) h, 0.1, 250000.0f);
 }
 
 void get_text_screen_coords(vec4 coords, mat4x4 wvp) {
@@ -284,7 +280,7 @@ void draw_stars(DrawableObject* starfield,
 static void display(GLFWwindow* window,
                     SolarSystem* system) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  double t = 30 * glfwGetTime();
+  double t = glfwGetTime() / 100;
   // We use these for shadow pass and render pass so keep them here
   mat4x4 body_world[system->num_bodies],
          text_world[system->num_bodies];
@@ -328,7 +324,9 @@ static void display(GLFWwindow* window,
     mat4x4_mul(body_wvp, vp, body_world[i]);
     if (i == 0) {
       bind_program(system->sun_shader);
-      add_float_uniform(system->body_shader, "time", t);
+      add_float_uniform(system->sun_shader, "time", t);
+      add_float_uniform(system->sun_shader, "width", width);
+      add_float_uniform(system->sun_shader, "height", height);
     } else {
       bind_program(system->body_shader);
     }
@@ -360,7 +358,7 @@ static void display(GLFWwindow* window,
     glActiveTexture(GL_TEXTURE1);
     bind_texture_cube(&system->shadows->shadow_map);
     //validate_program(system->body_shader);
-    if (i!=0)
+    //hif (i!=0)
     draw_triangles(system->body);
     unbind_texture_cube();
     // Draw text

@@ -15,6 +15,7 @@ out Data {
   vec3 eye_norm;
   vec4 eye_pos;
   vec4 sun_pos;
+  vec4 sun_clip_pos;
 } data_out;
 
 void main()
@@ -24,6 +25,7 @@ void main()
   data_out.eye_norm = normalize(mat3(N) * normal);
   data_out.eye_pos = WV * vec4(position, 1.0);
   data_out.sun_pos = vec4(sun_pos, 1.0);
+  data_out.sun_clip_pos = WVP * vec4(sun_pos, 1.0);
   // And assign vertex position
   gl_Position = WVP * vec4(position, 1.0);
 }

@@ -1,4 +1,4 @@
-8
+12
 
 Sun
 /home/andrew/code/orrery/textures/texture_sun.jpg
@@ -6,7 +6,7 @@ Sun
 0.0
 0.0
 1.0
-1.3920
+695800.0
 0.0
 27.0
 0
@@ -14,10 +14,10 @@ Sun
 Mercury
 /home/andrew/code/orrery/textures/texture_mercury.jpg
 0.7 0.2 0.7
-5791.0
+57909227
 7.004
-87.97
-0.2439
+0.2408467
+2439.7
 2.0
 58.65
 0
@@ -25,10 +25,10 @@ Mercury
 Venus
 /home/andrew/code/orrery/textures/texture_venus_surface.jpg
 0.9 0.7 0.2
-10820.0
+108209475
 3.394
-224.7
-0.6051
+0.61519726
+6051.8
 177.3
 243.0
 0
@@ -36,23 +36,67 @@ Venus
 Earth
 /home/andrew/code/orrery/textures/texture_earth_surface.jpg
 0.1 0.7 0.9
-14960.0
+149598262
 0.0
-365.26
-0.6378
+1.0000174
+6371.00
 23.45
-1.0
+0.99726968
 0
 
 Mars
 /home/andrew/code/orrery/textures/texture_mars.jpg
 0.8 0.3 0.3
-22794.0
+227943824
 1.850
-686.98
-0.3393
+1.8808476
+3389.5
 25.19
 1.026
+0
+
+Jupiter
+/home/andrew/code/orrery/textures/texture_jupiter.jpg
+0.8 0.3 0.3
+778340821
+1.304
+29.447498
+69911
+3.1
+0.41354
+0
+
+Saturn
+/home/andrew/code/orrery/textures/texture_saturn.jpg
+0.8 0.3 0.3
+1426666422
+2.49
+29.447498
+58232
+26.7
+0.444
+0
+
+Uranus
+/home/andrew/code/orrery/textures/texture_uranus.jpg
+0.8 0.3 0.3
+2870658186
+0.77
+84.016846
+25362
+97.8
+-0.718
+0
+
+Neptune
+/home/andrew/code/orrery/textures/texture_neptune.jpg
+0.8 0.3 0.3
+4498396441
+1.77
+164.79132
+24622
+28.3
+0.671
 0
 
 Moon

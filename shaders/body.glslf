@@ -22,7 +22,7 @@ void main()
  vec4 abs_position = abs(position_ls);
  float fs_z = max(abs_position.x, max(abs_position.y, abs_position.z));
 
- const float f = 200000.0;
+ const float f = 250000.0;
  const float n = 0.1;
  float unproj_z = (f + n) / (f - n) - ( 2 * f * n) / ( f - n ) / fs_z;
  float depth = (unproj_z + 1.0) * 0.5;
@@ -42,7 +42,8 @@ void main()
   //float spec = max(dot(v, r), 0.0);
   float diff = max(dot(data_in.eye_norm, s), 0.0);
 
-  vec4 diff_colour = diff * result * texture(surface, data_in.tex_coord);
+  //vec4 diff_colour = diff * result * texture(surface, data_in.tex_coord);
+  vec4 diff_colour = diff * texture(surface, data_in.tex_coord);
   //vec3 spec_colour = pow(spec, 3) * vec3(1.0, 1.0, 1.0);
   vec4 ambient_colour = vec4(0.01, 0.01, 0.01, 1.0);
 
